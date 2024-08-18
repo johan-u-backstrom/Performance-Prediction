@@ -8,5 +8,7 @@ from test import QP_test_cases
 # Methods are: 'trust-constr' or 'SLSQP' 
 #QP_test_cases.test_case_1(method = 'trust-constr')
 #QP_test_cases.test_case_2(method = 'SLSQP')
-QP_test_cases.test_case_2(method = 'trust-constr')
+#QP_test_cases.test_case_2(method = 'trust-constr')
+QP_test_cases.test_case_3()
+
 

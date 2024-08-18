@@ -1,11 +1,14 @@
 '''
 Module for testing the  QP module
 '''
+import json
+import pprint
 import numpy as np
 import pathlib
 import scipy.io as sio
 from source import QP
 from timeit import default_timer as timer
+
 
 test_dir =  pathlib.Path(__file__).parent.resolve()
 #print('The test directory path is:', test_dir)
@@ -82,3 +85,18 @@ def test_case_2(method = 'SLSQP'):
     print('The QP function at the Matlab solution = ', f_matlab)
     f_python = f(x)
     print('The QP function at the Python solution = ', f_python)
+
+def test_case_3(data_file = 'cdActuators.json'):
+    '''
+    Test case 3 tests loading of matlab cdActuators array of struct as a json file
+    The json file has been created using the matlab file: saveDataToJSONFile.m 
+    '''
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cdActuators = json.load(f)
+    
+    # Accessing data
+    pprint.pprint(cdActuators)
+    
