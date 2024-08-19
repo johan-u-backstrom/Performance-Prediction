@@ -88,15 +88,20 @@ def test_case_2(method = 'SLSQP'):
 
 def test_case_3(data_file = 'cdActuators.json'):
     '''
-    Test case 3 tests loading of matlab cdActuators array of struct as a json file
+    Test case 3 tests loading of matlab data that has been saved as a JSON file.
+    The test case is made for testing the import of CD Performance Prediction data,
+    which is in the form of: array of structs.
+    In Python the corresponding form is: list of dictionaries
     The json file has been created using the matlab file: saveDataToJSONFile.m 
     '''
     print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
-        cdActuators = json.load(f)
+        data = json.load(f)
     
-    # Accessing data
-    pprint.pprint(cdActuators)
-    
+    print('List length:', len(data))
+    # pprint.pprint(data[0])
+    print('Keys in first List element:')
+    for key in data[0]:
+        print(key)

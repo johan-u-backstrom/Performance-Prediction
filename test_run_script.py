@@ -9,6 +9,6 @@ from test import QP_test_cases
 #QP_test_cases.test_case_1(method = 'trust-constr')
 #QP_test_cases.test_case_2(method = 'SLSQP')
 #QP_test_cases.test_case_2(method = 'trust-constr')
-QP_test_cases.test_case_3()
+QP_test_cases.test_case_3(data_file = 'cdMeasurements.json')
 
 
