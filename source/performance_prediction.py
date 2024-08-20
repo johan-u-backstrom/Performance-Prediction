@@ -7,6 +7,7 @@ Copyright: Honeywell Process Solutions - North Vancouver
 '''
 
 import numpy as np
+from cd_measurement import cdMeasurement 
 import QP
 
 class CDPerformancePrediction:
@@ -19,26 +20,41 @@ class CDPerformancePrediction:
     Calling Syntax:
         cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators, cd_measurements)
 
-     Input Parameters:
+    Input Parameters:
         system_data  -          A dictionary of (QCS) system data that is not tied to a CD actuator or CD measurement    
-        cd_actuators -          A dictionary of CD actuator objects
-        cd_measurements -       A dictionary of CD measurement objects
+        cd_actuators -          A List of Dictionaries with CD actuator data
+        cd_measurements -       A List of Dictionary with CD measurement data
+    
+    Class Attributes:
+        Nu -                    Number of CD actuator beams
+        Ny -                    Number of CD measurement arrays
+        cdMeasurements -        A List of cdMeasurement objects
     '''
 
     def __init__(self, system_data, cd_actuators, cd_measurements):
         '''
         The Class Constructor
         '''
-        self.sample_time = system_data.get("sample time")
-        self.number_of_cd_bins = system_data.get("number of cd bins")
-        self.cd_bin_width = system_data.get("cd bin width")
-        self.spatial_eng_units = system_data.get("spatial eng units")
-        self.spatial_disp_units = system_data.get("spatial disp units")
+        # Attributes from the system_data Dictionary
+        self.sample_time = system_data.get("sampleTime")
+        self.number_of_cd_bins = system_data.get("numberOfCDBins")
+        self.bin_width = system_data.get("binWidth")
+        self.spatial_eng_units = system_data.get("spatialEngineeringUnits")
+        self.spatial_disp_units = system_data.get("SpatialDisplayUnits")
 
-        self.cd_actuators = cd_actuators
-        self.cd_measurements = cd_measurements
+        # Add a List of cd actuator objects
+        # self.cd_actuators = cd_actuators
+        self.Nu = len(cd_actuators)
+
+        # Add a List of cd measurement objects: cdMeasurements
+        # self.cd_measurements = cd_measurements
+        self.Ny = len(cd_measurements)
+        for m in cd_measurements:
+            self.cdMeasurements[m] = cdMeasurement(cd_measurements[m])
+
+
     #END constructor
-   
+
      
                                           
 

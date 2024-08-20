@@ -8,6 +8,7 @@ import pathlib
 import scipy.io as sio
 from source import QP
 from timeit import default_timer as timer
+from ..source.performance_prediction import CDPerformancePrediction
 
 
 test_dir =  pathlib.Path(__file__).parent.resolve()
