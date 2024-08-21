@@ -1,5 +1,5 @@
 '''
-Module for testing the  QP module
+Module for testing the Performance Prediction Project
 '''
 import json
 import pprint
@@ -8,8 +8,7 @@ import pathlib
 import scipy.io as sio
 from source import QP
 from timeit import default_timer as timer
-from ..source.performance_prediction import CDPerformancePrediction
-
+from source.performance_prediction import CDPerformancePrediction
 
 test_dir =  pathlib.Path(__file__).parent.resolve()
 #print('The test directory path is:', test_dir)
@@ -106,3 +105,56 @@ def test_case_3(data_file = 'cdActuators.json'):
     print('Keys in first List element:')
     for key in data[0]:
         print(key)
+
+def test_case_4():
+    '''
+    Test case 4 tests the CDPerformancePrediction class constructor.
+    
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
+
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data)
+    print('Printing of cd_performance_prediction object attributes')
+    print('Nu =', cd_performance_prediction.Nu)
+    print('Ny =', cd_performance_prediction.Ny)
+
+    # Print some of the cd_measurement object attributes
+    for cd_measurement in cd_performance_prediction.cd_measurements:
+        print('CD measurement name:', cd_measurement.name)
+        print('CD measurement weight:', cd_measurement.weight)

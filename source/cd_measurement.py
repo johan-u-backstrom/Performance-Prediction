@@ -6,9 +6,9 @@ Copyright: Honeywell Process Solutions - North Vancouver
 '''
 
 
-class cdMeasurement:
+class CDMeasurement:
     '''
-    The cdMeasurement class holds all the cd measurement data and 
+    The CDMeasurement class holds all the cd measurement data and 
     the methods required to process measurement data.
 
     Calling Syntax:
