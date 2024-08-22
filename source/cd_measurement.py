@@ -14,25 +14,27 @@ class CDMeasurement:
     Calling Syntax:
 
     Input Parameters:
-    cd_measurement - This is a dictionary containing the following cd measurement data
+    cd_measurement_dict - This is a dictionary containing the following cd measurement data
 
     '''
 
-    def __init__(self, cd_measurement):
+    def __init__(self, cd_measurement_dict):
         '''
         The Class Constructor
         '''
-        self.name =  cd_measurement.get('name')
-        self.resolution = cd_measurement.get('resolution')
-        self.units = cd_measurement.get('units')
-        self.control_mode = cd_measurement.get('controlMode')
-        self.initial_profile = cd_measurement.get('initialProfile')
-        self.initial_profile_spectrum = cd_measurement.get('initialProfileSpectrum')
-        self.final_profile = cd_measurement.get('finalProfile')
-        self.final_profile_spectrum = cd_measurement.get('finalProfileSpectrum')
-        self.low_edge_of_sheet = cd_measurement.get('lowEdgeOfSheet')
-        self.high_edge_of_sheet = cd_measurement.get('highEdgeOfSheet')
-        self.md_target = cd_measurement.get('mdTarget')
-        self.bias_target = cd_measurement.get('biasTarget')
-        self.weight = cd_measurement.get('weight')
-        self.weight_norm_factor = cd_measurement.get('measNormFactor')
+        self.name =  cd_measurement_dict.get('name')
+        self.resolution = cd_measurement_dict.get('resolution')
+        self.units = cd_measurement_dict.get('units')
+        self.control_mode = cd_measurement_dict.get('controlMode')
+        self.initial_profile = cd_measurement_dict.get('initialProfile')
+        self.initial_profile_spectrum = cd_measurement_dict.get('initialProfileSpectrum')
+        self.final_profile = cd_measurement_dict.get('finalProfile')
+        self.final_profile_spectrum = cd_measurement_dict.get('finalProfileSpectrum')
+        self.low_edge_of_sheet = cd_measurement_dict.get('lowEdgeOfSheet')
+        self.high_edge_of_sheet = cd_measurement_dict.get('highEdgeOfSheet')
+        self.md_target = cd_measurement_dict.get('mdTarget')
+        self.bias_target = cd_measurement_dict.get('biasTarget')
+        self.weight = cd_measurement_dict.get('weight')
+        self.weight_norm_factor = cd_measurement_dict.get('measNormFactor')
+
+        

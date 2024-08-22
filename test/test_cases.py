@@ -148,8 +148,19 @@ def test_case_4():
     for key in cd_measurements_data[0]:
         print(key)
 
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+
     # Create a cd_performanc_prediction object
-    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data)
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data)
     print('Printing of cd_performance_prediction object attributes')
     print('Nu =', cd_performance_prediction.Nu)
     print('Ny =', cd_performance_prediction.Ny)
