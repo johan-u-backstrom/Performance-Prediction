@@ -4,11 +4,13 @@ Module for testing the Performance Prediction Project
 import json
 import pprint
 import numpy as np
+import matplotlib.pyplot as plt
 import pathlib
 import scipy.io as sio
 from source import QP
 from timeit import default_timer as timer
 from source.performance_prediction import CDPerformancePrediction
+from source.cd_process_model import CDProcessModel
 
 test_dir =  pathlib.Path(__file__).parent.resolve()
 #print('The test directory path is:', test_dir)
@@ -169,3 +171,20 @@ def test_case_4():
     for cd_measurement in cd_performance_prediction.cd_measurements:
         print('CD measurement name:', cd_measurement.name)
         print('CD measurement weight:', cd_measurement.weight)
+
+def test_case_5():
+    my = 100
+    nu = 30
+    g = 1
+    w = 9
+    a = 1.2
+    d = 0.3
+    zba = np.linspace(4.8, 95.2, nu+1)
+    response_type = 'even'
+   
+    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type, a, d)
+    print('G[:,0] =', G[:,0])
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,0])
+    plt.show()
+    

@@ -8,7 +8,7 @@ import numpy as np
 
 class CDProcessModel:
     '''
-    The cd_process_model module implements the cdProcessModel class
+    The cdProcessModel class
     which holds all the cd process model attributes and methods.
 
     Calling Syntax:
@@ -60,15 +60,15 @@ class CDProcessModel:
                 loa = cd_actuators_obj_lst[j].low_offset
                 hoa = cd_actuators_obj_lst[j].high_offset
                 act_width_array = cd_actuators_obj_lst[j].width_array
-                zba = self.zba_calc(los, hos, loa, hoa, bin_width, num_bins, act_width_array)
+                zba = self.zba_calc(los, hos, loa, hoa, num_bins, act_width_array)
                 zba_matrix[i][j] = zba
         return zba_matrix
     
-    def zba_calc(self, los, hos, loa, hoa, bin_width, num_bins, act_width_array):
+    def zba_calc(self, los, hos, loa, hoa, bin_width, act_width_array):
         '''
         zba calculates the Zone Boundary Array for a CD Actuator - CD Measurement pair
 
-        calling syntax: zba = zba(los, hos, loa, hoa, bin_width, num_bins, act_width_array)
+        calling syntax: zba = zba(los, hos, loa, hoa, bin_width, act_width_array)
  
         Inputs:
         los -               low edge of sheet, [bins]
@@ -80,7 +80,6 @@ class CDProcessModel:
 
         Outputs:
         zba -                   zone boudary array, [bins]
-        zba_c -                 zone boundary array midpoints, [bins]
         '''
         loa = loa/bin_width                                         # in bins
         hoa = hoa/bin_width                                         # in bins
@@ -102,3 +101,67 @@ class CDProcessModel:
             zba[i] = zba[i-1] + act_width_array_at_scanner[i-1]
         
         return zba
+    
+    @staticmethod
+    def cd_response_matrix_build(g, w, zba, my, nu, response_type, a = 0.0, d = 0.0):
+        '''
+        Builds the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
+        The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
+        actuator zones.
+
+        If response_type is 'even', then Dimitri Gorinevsky's spatial model is used, which 
+        works for all CD models except for fiber orinetaiton.
+
+        If response_type is 'odd', then Danlei Chu's sptaial model is used, which models the response
+        from a slice lip to fiber orinetation.
+
+        Calling Syntax:
+        G = cd_response_matrix_build(g, w, a, d, zba, my, nu, response_type)
+
+        Inputs:
+        g -             model gain
+        w -             model width
+        zba -           the zone boundary array
+        my -            number of cd bins       
+        nu -            number of cd actuator zones
+        response_type   can be 'even' or 'odd'
+        a -             model attenuation (only used in the even model)
+        d -             model divergence (only used in the even model)
+
+        Outputs:
+        G -         spatial resonse matrix
+        '''
+        G = np.zeros((my, nu))
+
+        # zba midpoints
+        zba_c = np.zeros(nu)
+        for i in range(nu):
+            zba_c[i] = (zba[i] + zba[i+1])/2
+     
+        # the cd bins
+        x = range(1, my+1)
+     
+        if response_type == 'even':
+            # Dimitri's Model
+            for i in range(nu):
+                G[:,i] = (g/2)*(np.exp(-a*(((x - zba_c[i] - d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] - d*w)/w) + 
+                                np.exp(-a*(((x - zba_c[i] + d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] + d*w)/w))
+        elif response_type == 'odd':   
+            # Danlei's Model
+            for i in range(nu):
+                print('to implement')
+        
+        # round small leading and trailing values to zero
+        epsilon = 0.001*g
+        for i in range(nu):
+            if abs(G[0][i]) < epsilon:
+                first_valid = int(min(np.argwhere(abs(G[:,i]) >  epsilon)))
+                G[0:first_valid, i] = np.zeros(first_valid)
+    
+            if abs(G[my-1][i]) < epsilon:
+                last_valid = int(max(np.argwhere(abs(G[:,i]) > epsilon)))
+                G[last_valid+1:my, i] = np.zeros(my-1-last_valid)
+        
+        return G
+
+      
