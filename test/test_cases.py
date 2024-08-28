@@ -222,3 +222,21 @@ def test_case_6():
     ax.plot(G)
 
     plt.show()   
+
+def test_case_7():
+    '''
+    Tests the building of the zone boundary array. There is a matching test case
+    in Matlab that provides the expected result.
+    '''
+    nu = 30
+    my = 100
+    los = 5.5
+    hos = 95.5
+    loa = 7
+    hoa = 9
+    bin_width  = 3 
+    awd = 10
+    act_widths = awd*np.ones(nu)
+    zba = CDProcessModel.zba_calc(los, hos, loa, hoa, bin_width, act_widths)
+    
+    print('zba =', zba)

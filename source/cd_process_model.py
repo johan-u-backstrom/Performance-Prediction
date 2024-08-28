@@ -52,7 +52,6 @@ class CDProcessModel:
         '''
         zba_matrix = np.zeros((Ny, Nu)).tolist()
         bin_width = cd_system_obj.bin_width
-        num_bins = cd_system_obj.number_of_cd_bins
         for i in range(Ny):
             los = cd_measurements_obj_lst[i].low_edge_of_sheet
             hos = cd_measurements_obj_lst[i].high_edge_of_sheet
@@ -60,11 +59,12 @@ class CDProcessModel:
                 loa = cd_actuators_obj_lst[j].low_offset
                 hoa = cd_actuators_obj_lst[j].high_offset
                 act_width_array = cd_actuators_obj_lst[j].width_array
-                zba = self.zba_calc(los, hos, loa, hoa, num_bins, act_width_array)
+                zba = self.zba_calc(los, hos, loa, hoa, bin_width, act_width_array)
                 zba_matrix[i][j] = zba
         return zba_matrix
     
-    def zba_calc(self, los, hos, loa, hoa, bin_width, act_width_array):
+    @staticmethod
+    def zba_calc(los, hos, loa, hoa, bin_width, act_width_array):
         '''
         zba calculates the Zone Boundary Array for a CD Actuator - CD Measurement pair
 
