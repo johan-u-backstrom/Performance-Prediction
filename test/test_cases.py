@@ -173,6 +173,10 @@ def test_case_4():
         print('CD measurement weight:', cd_measurement.weight)
 
 def test_case_5():
+    '''
+    Testing of the traditional CD response model matrix (damped cosine). There is a matching test case
+    in Matlab that provides the expected result.
+    '''
     my = 100
     nu = 30
     g = 1
@@ -186,5 +190,35 @@ def test_case_5():
     print('G[:,0] =', G[:,0])
     [fig, ax] = plt.subplots()
     ax.plot(G[:,0])
+   
+    [fig, ax] = plt.subplots()
+    ax.plot(G)
+
     plt.show()
-    
+
+def test_case_6():
+    '''
+    Testing of the fiber orientation response model matrix (odd response). There is a matching test case
+    in Matlab that provides the expected result.
+    '''
+    my = 120
+    nu = 30
+    g = 1
+    w = 9
+    a = 1.2
+    d = 0.3
+    zba = np.linspace(2, 122, nu+1)
+    response_type = 'odd'
+   
+    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type)
+    print('G[:,0] =', G[:,0])
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,0])
+
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,int(np.floor(nu/2))])
+   
+    [fig, ax] = plt.subplots()
+    ax.plot(G)
+
+    plt.show()   

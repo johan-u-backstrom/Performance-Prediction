@@ -12,3 +12,4 @@ from test import test_cases
 #test_cases.test_case_3(data_file = 'cdMeasurements.json')
 #test_cases.test_case_4()
 test_cases.test_case_5()
+#test_cases.test_case_6()

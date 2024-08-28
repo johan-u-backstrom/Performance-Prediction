@@ -132,25 +132,37 @@ class CDProcessModel:
         G -         spatial resonse matrix
         '''
         G = np.zeros((my, nu))
+        eps = np.finfo(float).eps
 
         # zba midpoints
         zba_c = np.zeros(nu)
         for i in range(nu):
             zba_c[i] = (zba[i] + zba[i+1])/2
      
-        # the cd bins
-        x = range(1, my+1)
-     
+        # the cd bin array
+        x = np.linspace(1, my, my)
+        
         if response_type == 'even':
             # Dimitri's Model
             for i in range(nu):
                 G[:,i] = (g/2)*(np.exp(-a*(((x - zba_c[i] - d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] - d*w)/w) + 
                                 np.exp(-a*(((x - zba_c[i] + d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] + d*w)/w))
         elif response_type == 'odd':   
-            # Danlei's Model
+            # Danlei's Fiber Orinetation Model
             for i in range(nu):
-                print('to implement')
-        
+                # find the location of CD coordinates where x-ZBAc(i) == 0, to prevent division
+                # by zero in the the model
+                i_dx_0 = np.argwhere(np.equal(x, zba_c[i]))
+                print('i_dx_0 =', i_dx_0)
+                if np.size(i_dx_0) != 0: 
+                    x[i_dx_0] = eps*np.ones(np.shape(i_dx_0)) + x[i_dx_0]
+
+                impulse_response = (g*w/10.2108)/(x - zba_c[i])*(1 - np.exp(-(16*(x - zba_c[i])/w)**2))
+                
+                if np.size(i_dx_0) != 0: 
+                    impulse_response[i_dx_0] = np.zeros(np.shape(i_dx_0))
+                G[:,i] = impulse_response
+                    
         # round small leading and trailing values to zero
         epsilon = 0.001*g
         for i in range(nu):
