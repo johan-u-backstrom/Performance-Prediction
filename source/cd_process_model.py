@@ -103,7 +103,7 @@ class CDProcessModel:
         return zba
     
     @staticmethod
-    def cd_response_matrix_build(g, w, zba, my, nu, response_type, a = 0.0, d = 0.0):
+    def cd_response_matrix_build(g, w, zba, my, nu, response_type, edge_padding_mode = 'none', a = 0.0, d = 0.0):
         '''
         Builds the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
         The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
@@ -115,6 +115,9 @@ class CDProcessModel:
         If response_type is 'odd', then Danlei Chu's sptaial model is used, which models the response
         from a slice lip to fiber orinetation.
 
+        The default edge padding mode is none, others are average, linear, and reflection. For details, please see the 
+        Experion MX CD Controls User Manual. 
+
         Calling Syntax:
         G = cd_response_matrix_build(g, w, a, d, zba, my, nu, response_type)
 
@@ -125,6 +128,7 @@ class CDProcessModel:
         my -            number of cd bins       
         nu -            number of cd actuator zones
         response_type   can be 'even' or 'odd'
+        edge_padding    can be 'none', 'average', 'linear', or 'reflection'
         a -             model attenuation (only used in the even model)
         d -             model divergence (only used in the even model)
 
@@ -142,6 +146,9 @@ class CDProcessModel:
         # the cd bin array
         x = np.linspace(1, my, my)
         
+        #
+        # The response model
+        #
         if response_type == 'even':
             # Dimitri's Model
             for i in range(nu):
@@ -162,7 +169,49 @@ class CDProcessModel:
                 if np.size(i_dx_0) != 0: 
                     impulse_response[i_dx_0] = np.zeros(np.shape(i_dx_0))
                 G[:,i] = impulse_response
-                    
+
+        #
+        # Edge Padding
+        #
+        if edge_padding_mode != 'none':
+            # Determine the width of spatial response in cd bins and select the widest one
+            resp_width = 0      # in cd bins
+            for i in range(nu):
+                g_max = max(abs(G[:,i]))
+                resp_indices = np.argwhere(abs(G[:,i]) > 0.1*g_max)
+                resp_width_i = resp_indices[-1] - resp_indices[0] + 1
+                if resp_width_i > resp_width:
+                    resp_width = resp_width_i
+            print('response width in cd bins =', resp_width)   
+
+            # Determine the number of actuator zones to pad at the low and high end 
+            # of the sheet. The required actuator padding is half the response width,
+            # measured actuator zones at the measurement location (scanner) 
+            awd_at_scanner = np.mean(zba[1:] - zba[0:-1])       # in cd bins
+            n_pad = int(np.ceil((resp_width/2)/awd_at_scanner))      # number of actuator zones to pad
+            print('reqiured act zones to pad = ', n_pad)
+
+            # Augment the zba
+            zba_pad_low = np.zeros(n_pad)
+            low_pad_start = zba[0] 
+            for i in range(-1, -(n_pad+1), -1):
+                zba_pad_low[i] = low_pad_start - awd_at_scanner
+                low_pad_start = zba_pad_low[i]
+
+            zba_pad_high = np.zeros(n_pad)
+            high_pad_start = zba[-1] 
+            for i in range(n_pad):
+                zba_pad_high[i] = high_pad_start + awd_at_scanner
+                high_pad_start = zba_pad_high[i]
+
+            zba_a = np.concatenate((zba_pad_low, zba, zba_pad_high))
+
+            print('augmented zba =', zba_a)
+
+        if edge_padding_mode == 'average':
+            print('to do')
+
+
         # round small leading and trailing values to zero
         epsilon = 0.001*g
         for i in range(nu):

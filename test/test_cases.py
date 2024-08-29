@@ -240,3 +240,31 @@ def test_case_7():
     zba = CDProcessModel.zba_calc(los, hos, loa, hoa, bin_width, act_widths)
     
     print('zba =', zba)
+
+def test_case_8():
+    '''
+    Testing of the actuator edge padding. There is a matching test case
+    in Matlab that provides the expected result.
+    '''
+    my = 120
+    nu = 30
+    g = 1
+    w = 9
+    a = 1.2
+    d = 0.3
+    zba = np.linspace(2, 122, nu+1)
+    response_type = 'odd'
+    edge_padding_mode = 'average'
+   
+    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type, edge_padding_mode)
+    print('G[:,0] =', G[:,0])
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,0])
+
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,int(np.floor(nu/2))])
+   
+    [fig, ax] = plt.subplots()
+    ax.plot(G)
+
+    plt.show()   
