@@ -254,9 +254,9 @@ def test_case_8():
     d = 0.3
     zba = np.linspace(2, 122, nu+1)
     response_type = 'odd'
-    edge_padding_mode = 'average'
+    edge_padding_mode = 'linear'
    
-    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type, edge_padding_mode)
+    G = CDProcessModel.cd_response_matrix_build(zba, my, nu,g,w,response_type = response_type, edge_padding_mode = edge_padding_mode)
     print('G[:,0] =', G[:,0])
     [fig, ax] = plt.subplots()
     ax.plot(G[:,0])

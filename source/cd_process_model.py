@@ -103,7 +103,7 @@ class CDProcessModel:
         return zba
     
     @staticmethod
-    def cd_response_matrix_build(g, w, zba, my, nu, response_type, edge_padding_mode = 'none', a = 0.0, d = 0.0):
+    def cd_response_matrix_build(zba, my, nu, g, w, a = None, d = None, response_type = 'even', edge_padding_mode = None):
         '''
         Builds the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
         The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
@@ -119,18 +119,19 @@ class CDProcessModel:
         Experion MX CD Controls User Manual. 
 
         Calling Syntax:
-        G = cd_response_matrix_build(g, w, a, d, zba, my, nu, response_type)
+        G = cd_response_matrix_build(zba, my, nu, g, w, a = None, d = None, response_type = 'even', edge_padding_mode = None)
 
         Inputs:
-        g -             model gain
-        w -             model width
         zba -           the zone boundary array
         my -            number of cd bins       
         nu -            number of cd actuator zones
-        response_type   can be 'even' or 'odd'
-        edge_padding    can be 'none', 'average', 'linear', or 'reflection'
-        a -             model attenuation (only used in the even model)
-        d -             model divergence (only used in the even model)
+        g -             model gain
+        w -             model width
+        a -             model attenuation (optional, only used in the even model)
+        d -             model divergence (optional, only used in the even model)
+        response_type   can be 'even' or 'odd' (optional, defaults to 'even')
+        edge_padding    Optional, can be  'average', 'linear', or 'reflection'
+       
 
         Outputs:
         G -         spatial resonse matrix
@@ -173,7 +174,7 @@ class CDProcessModel:
         #
         # Edge Padding
         #
-        if edge_padding_mode != 'none':
+        if edge_padding_mode != None:
             # Determine the width of spatial response in cd bins and select the widest one
             resp_width = 0      # in cd bins
             for i in range(nu):
@@ -189,6 +190,7 @@ class CDProcessModel:
             # measured actuator zones at the measurement location (scanner) 
             awd_at_scanner = np.mean(zba[1:] - zba[0:-1])       # in cd bins
             n_pad = int(np.ceil((resp_width/2)/awd_at_scanner))      # number of actuator zones to pad
+            
             print('reqiured act zones to pad = ', n_pad)
 
             # Augment the zba
@@ -205,11 +207,76 @@ class CDProcessModel:
                 high_pad_start = zba_pad_high[i]
 
             zba_a = np.concatenate((zba_pad_low, zba, zba_pad_high))
+            nu_a = int(nu + 2*n_pad)
 
             print('augmented zba =', zba_a)
 
-        if edge_padding_mode == 'average':
-            print('to do')
+            # Calculate the augmented response matrix
+            G_aug =  CDProcessModel.cd_response_matrix_build(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type)
+            print('shape of G_aug:', np.shape(G_aug))
+            print('G_aug[:,0,2] = ', G_aug[:,0:3])
+            print('G_aug[:,33:35] = ', G_aug[:,33:36])
+
+            # Calculate the equivalent padding matrix G_hat to G_aug, such that
+            #
+            #   G_hat*u = G_aug*u_aug
+            #
+            # The effect of padded actuator zones can be represented as changes to the first few and 
+            # the last few columns of G.
+            G_hat = G
+            if edge_padding_mode == 'average':
+                # The setpoints of padded zones at the low edge equal the
+                # first actuator setpoint.The setpoints of padded zones at
+                # the high edge equals the last actuator setpoint:
+                #
+                #   u_pad_los[i] = u[0] and u_pad_hos[i] = u[-1]
+                #
+                # This padding model only requires an update to the first and last
+                # column of G
+
+                # The required change to the first column of G
+                g_hat = G_hat[:,0]                          # modifier for the columns of G
+                for i in range(n_pad):
+                    g_hat = g_hat + G_aug[:,i]
+                G_hat[:,0] = g_hat
+
+                # The required change to the last column of G 
+                g_hat = G_hat[:,-1]
+                for i in range(n_pad):
+                    g_hat = g_hat + G_aug[:, nu_a-n_pad+i]
+                G_hat[:,-1] = g_hat
+            
+            elif edge_padding_mode == 'linear':
+                # In this padding mode, the setpoints of padded zones are linear 
+                # extensions of the first and last two actuator setpoints:
+                #   
+                #   u_pad_los[n] = (n+2)*u[0] - (n+1)*u[1] and
+                #   u_pad_hos[n] = (n+2)*u[-1] - (n+1)*u[-2], n = 0,1,2,...
+                #   
+                # where u_pad_los[n] is the nth padded  actuator zone at the low edge
+                # and u_pad_hos[n] is the nth padded actuator zone at the high edge.
+                # This padding mode will affect the first two and last two columns of G
+
+                # The required change to the first two columns of G
+                g0_hat = G_hat[:,0] 
+                g1_hat = G_hat[:,1] 
+                for i in range(n_pad):
+                    g0_hat = g0_hat + (i+2)*G_aug[:,n_pad-1-i]
+                    g1_hat = g1_hat - (i+1)*G_aug[:,n_pad-1-i]
+                G_hat[:,0] = g0_hat
+                G_hat[:,1] = g1_hat
+
+                # The required change to the last two columns of G
+                g0_hat = G_hat[:,-1] 
+                g1_hat = G_hat[:,-2] 
+                for i in range(n_pad):
+                    g0_hat = g0_hat + (i+2)*G_aug[:,-n_pad+i]
+                    g1_hat = g1_hat - (i+1)*G_aug[:,-n_pad+i]
+                G_hat[:,-1] = g0_hat
+                G_hat[:,-2] = g1_hat
+
+            G = G_hat
+   
 
 
         # round small leading and trailing values to zero
