@@ -274,7 +274,33 @@ class CDProcessModel:
                     g1_hat = g1_hat - (i+1)*G_aug[:,-n_pad+i]
                 G_hat[:,-1] = g0_hat
                 G_hat[:,-2] = g1_hat
+            
+            elif edge_padding_mode == 'reflection':
+                # In this padding mode, the setpoints of padded zones are first reflected  
+                # in the y-axis and then the x-axis, with origo in [0, u[0]] and [nu-1, u[nu-1]]]
+                # respectively for the low and high edge of the sheet:
+                #   
+                #   u_pad_los[n] = 2*u[0] - u[n] and
+                #   u_pad_hos[n] = 2*u[-1] - u[-1-n], n = 0,1,2,...
+                #   
+                # where u_pad_los[n] is the nth padded  actuator zone at the low edge
+                # and u_pad_hos[n] is the nth padded actuator zone at the high edge.
+                # This padding mode will affect the first  and last n_pad columns of G
+                
+                # The required change to the first columns of G
+                g_hat = G_hat[:,0] 
+                for i in range(n_pad):
+                    g_hat = g_hat + 2*G_aug[:,i]
+                    G_hat[:,i+1] = G_hat[:,i+1] - G_aug[:,n_pad-i-1]
+                G_hat[:,0] =g_hat
 
+                # The required change to the last columns of G
+                g_hat = G_hat[:,-1] 
+                for i in range(n_pad):
+                    g_hat = g_hat + 2*G_aug[:,-1-i]
+                    G_hat[:,-2-i] = G_hat[:,-2-i] - G_aug[:,-n_pad+i]
+                G_hat[:,-1] = g_hat
+    
             G = G_hat
    
 

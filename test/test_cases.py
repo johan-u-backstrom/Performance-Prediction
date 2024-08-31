@@ -246,25 +246,33 @@ def test_case_8():
     Testing of the actuator edge padding. There is a matching test case
     in Matlab that provides the expected result.
     '''
-    my = 120
+    my = 128
     nu = 30
     g = 1
     w = 9
     a = 1.2
     d = 0.3
-    zba = np.linspace(2, 122, nu+1)
+    zba = np.linspace(4.5, 124.5, nu+1)
     response_type = 'odd'
-    edge_padding_mode = 'linear'
+    edge_padding_mode = 'reflection'
    
     G = CDProcessModel.cd_response_matrix_build(zba, my, nu,g,w,response_type = response_type, edge_padding_mode = edge_padding_mode)
     print('G[:,0] =', G[:,0])
+    
     [fig, ax] = plt.subplots()
     ax.plot(G[:,0])
+    plt.title('G[:,0]')
 
     [fig, ax] = plt.subplots()
     ax.plot(G[:,int(np.floor(nu/2))])
+    plt.title('G[:,nu/2]')
+
+    [fig, ax] = plt.subplots()
+    ax.plot(G[:,nu-1])
+    plt.title('G[:,nu-1]')
    
     [fig, ax] = plt.subplots()
     ax.plot(G)
+    plt.title('G')
 
     plt.show()   
