@@ -10,8 +10,8 @@ from test import test_cases
 #test_cases.test_case_2(method = 'SLSQP')
 #test_cases.test_case_2(method = 'trust-constr')
 #test_cases.test_case_3(data_file = 'cdMeasurements.json')
-#test_cases.test_case_4()
+test_cases.test_case_4()                                        # tests the CDPerformancePrediction constructor
 #test_cases.test_case_5()
 #test_cases.test_case_6()
 #test_cases.test_case_7()
-test_cases.test_case_8()
+#test_cases.test_case_8()

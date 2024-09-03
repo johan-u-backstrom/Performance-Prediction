@@ -166,6 +166,7 @@ def test_case_4():
     print('Printing of cd_performance_prediction object attributes')
     print('Nu =', cd_performance_prediction.Nu)
     print('Ny =', cd_performance_prediction.Ny)
+    print('G =',  cd_performance_prediction.cd_process_model.G)
 
     # Print some of the cd_measurement object attributes
     for cd_measurement in cd_performance_prediction.cd_measurements:

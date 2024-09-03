@@ -31,6 +31,7 @@ class CDPerformancePrediction:
     Class Attributes:
         Nu -                    Number of CD actuator beams
         Ny -                    Number of CD measurement arrays
+        cd_Actuators -          A List of CDActuator objects
         cd_measurements -       A List of CDMeasurement objects
     '''
 

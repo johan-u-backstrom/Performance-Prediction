@@ -8,8 +8,8 @@ import numpy as np
 
 class CDProcessModel:
     '''
-    The cdProcessModel class
-    which holds all the cd process model attributes and methods.
+    The cdProcessModel class impolements the CD Process Model Object which represents 
+    a MIMO (multiple inputs multiple outputs) CD Process.
 
     Calling Syntax:
 
@@ -24,33 +24,76 @@ class CDProcessModel:
         '''
         The Class Constructor
         '''
+        self.Ny = Ny
+        self.Nu = Nu
         self.gain =  cd_process_model_dict.get('gain')
         self.width = cd_process_model_dict.get('width')
         self.attenuation = cd_process_model_dict.get('attenuation')
         self.divergence = cd_process_model_dict.get('divergence')
-        self.edge_padding_mode = cd_process_model_dict.get('actPaddingMode')
-    
-        self.zba_matrix = self.zba_matrix_calc(cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny)
+        
+        self.response_type = self.response_type_mimo_build(cd_process_model_dict)
+        self.edge_padding_mode = self.edge_padding_mode_mimo_build(cd_process_model_dict)
+        self.zba = self.zba_mimo_build(cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny)
+        self.G = self.G_mimo_build(cd_actuators_obj_lst, cd_measurements_obj_lst)
         
         print('CDProcessModel Class Constructor')
         print('process model gain =', self.gain)
         print('process model width =', self.width)
-        print('num cols of the zba_matrix List:', len(self.zba_matrix))
-        print('num rows of the zba_matrix List:', len(self.zba_matrix[0]))
-        print('zba_matrix[0][0] =', self.zba_matrix[0][0])
-        print('zba_matrix[0][1] =', self.zba_matrix[0][1])
-        print('zba_matrix[1][0] =', self.zba_matrix[1][0])
-        print('zba_matrix[1][1] =', self.zba_matrix[1][1])
-        print('zba_matrix[2][0] =', self.zba_matrix[2][0])
-        print('zba_matrix[2][1] =', self.zba_matrix[2][1])
+        print('num cols of the zba matrix List:', len(self.zba))
+        print('num rows of the zba matrix List:', len(self.zba[0]))
+        print('zba_matrix[0][0] =', self.zba[0][0])
+        print('zba_matrix[0][1] =', self.zba[0][1])
+        print('zba_matrix[1][0] =', self.zba[1][0])
+        print('zba_matrix[1][1] =', self.zba[1][1])
+        print('zba_matrix[2][0] =', self.zba[2][0])
+        print('zba_matrix[2][1] =', self.zba[2][1])
 
 
-    def zba_matrix_calc(self, cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny):
+    def response_type_mimo_build(self, cd_process_model_dict):
         '''
-        zba_matrix_calc generates the zba matrix which is a Ny x Nu
-        nested List of zba arrays
+        response_type_mimo_build builds/extracts a Ny x Nu 2D nested list of CD response types from the 
+        cd_process_model_dict provided by the caller, e.g. RESTFul interface. 
         '''
-        zba_matrix = np.zeros((Ny, Nu)).tolist()
+        Ny = self.Ny
+        Nu = self.Nu
+        resp_shape = cd_process_model_dict.get('respShape')
+        response_type_mimo = np.zeros((Ny, Nu)).tolist()
+        for i in range(Ny):
+            for j in range(Nu):
+                if resp_shape[i][j] == 0:
+                    response_type_mimo[i][j] = 'even'
+                elif resp_shape[i][j] == 1:
+                    response_type_mimo[i][j] = 'odd'
+        return response_type_mimo
+
+    def edge_padding_mode_mimo_build(self, cd_process_model_dict):
+        '''
+        edge_padding_mimo_build builds/extracts a Ny x Nu 2D nested list of CD edge padding modes from the 
+        cd_process_model_dict provided by the caller, e.g. RESTFul interface.
+        '''
+        Ny = self.Ny
+        Nu = self.Nu
+        padding_mode = cd_process_model_dict.get('actPaddingMode')
+        edge_padding_mode_mimo = np.zeros((Ny, Nu)).tolist()
+        for i in range(Ny):
+            for j in range(Nu):
+                if padding_mode[i][j] == 1:
+                    edge_padding_mode_mimo[i][j] = 'average'
+                elif padding_mode[i][j] == 2:
+                    edge_padding_mode_mimo[i][j] = 'linear'
+                elif padding_mode[i][j] == 3:
+                    edge_padding_mode_mimo[i][j] = 'reflection'
+                else:
+                    edge_padding_mode_mimo[i][j] = None
+        return  edge_padding_mode_mimo
+
+
+
+    def zba_mimo_build(self, cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny):
+        '''
+        zba_mimo_build builds the zba matrix for the Ny x Nu mimo system. It returns a nested 2D List (matrix) of zba arrays.
+        '''
+        zba_mimo = np.zeros((Ny, Nu)).tolist()
         bin_width = cd_system_obj.bin_width
         for i in range(Ny):
             los = cd_measurements_obj_lst[i].low_edge_of_sheet
@@ -60,8 +103,32 @@ class CDProcessModel:
                 hoa = cd_actuators_obj_lst[j].high_offset
                 act_width_array = cd_actuators_obj_lst[j].width_array
                 zba = self.zba_calc(los, hos, loa, hoa, bin_width, act_width_array)
-                zba_matrix[i][j] = zba
-        return zba_matrix
+                zba_mimo[i][j] = zba
+        return zba_mimo
+    
+    def G_mimo_build(self, cd_actuators_obj_lst, cd_measurements_obj_lst):
+        '''
+        G_mimo_build builds the gain matrices Gs for the Ny x Nu mimo system. It returns a nested 2D List (matrix) of G matrices.
+        '''
+        Ny = self.Ny
+        Nu = self.Nu
+        g = self.gain
+        w = self.width
+        a = self.attenuation
+        d = self.divergence
+        zba = self.zba
+        response_type = self.response_type
+        edge_padding_mode = self.edge_padding_mode
+        G_mimo = np.zeros((Ny, Nu)).tolist()
+        for i in range(Ny):
+            my = cd_measurements_obj_lst[i].resolution
+            for j in range(Nu):
+                nu = cd_actuators_obj_lst[j].resolution
+                print('Building G_mimo for actuator', cd_actuators_obj_lst[j].name, 'and measurement', cd_measurements_obj_lst[i].name)
+                G_mimo[i][j] = CDProcessModel.cd_response_matrix_build(zba[i][j], my, nu, g[i][j], w[i][j], a[i][j], d[i][j], 
+                                                                 response_type[i][j], edge_padding_mode[i][j])
+        return G_mimo
+
     
     @staticmethod
     def zba_calc(los, hos, loa, hoa, bin_width, act_width_array):
@@ -103,7 +170,7 @@ class CDProcessModel:
         return zba
     
     @staticmethod
-    def cd_response_matrix_build(zba, my, nu, g, w, a = None, d = None, response_type = 'even', edge_padding_mode = None):
+    def cd_response_matrix_build(zba, my, nu, g, w, a = 0, d = 0, response_type = 'even', edge_padding_mode = None):
         '''
         Builds the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
         The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
@@ -127,10 +194,10 @@ class CDProcessModel:
         nu -            number of cd actuator zones
         g -             model gain
         w -             model width
-        a -             model attenuation (optional, only used in the even model)
-        d -             model divergence (optional, only used in the even model)
+        a -             model attenuation (optional, only used in the even model, defaults to 0)
+        d -             model divergence (optional, only used in the even model, defaults to 0)
         response_type   can be 'even' or 'odd' (optional, defaults to 'even')
-        edge_padding    Optional, can be  'average', 'linear', or 'reflection'
+        edge_padding    Optional, can be  None, 'average', 'linear', or 'reflection', defaults to None
        
 
         Outputs:
@@ -180,6 +247,8 @@ class CDProcessModel:
             for i in range(nu):
                 g_max = max(abs(G[:,i]))
                 resp_indices = np.argwhere(abs(G[:,i]) > 0.1*g_max)
+                if resp_indices.size == 0:
+                    break   # We have a process model with no response, e.g. zero gain
                 resp_width_i = resp_indices[-1] - resp_indices[0] + 1
                 if resp_width_i > resp_width:
                     resp_width = resp_width_i
@@ -277,15 +346,15 @@ class CDProcessModel:
             
             elif edge_padding_mode == 'reflection':
                 # In this padding mode, the setpoints of padded zones are first reflected  
-                # in the y-axis and then the x-axis, with origo in [0, u[0]] and [nu-1, u[nu-1]]]
-                # respectively for the low and high edge of the sheet:
+                # in the y-axis and then the x-axis, with origin in [0, u[0]] and [nu-1, u[nu-1]]]
+                # for the low and high edge of the sheet respectively:
                 #   
                 #   u_pad_los[n] = 2*u[0] - u[n] and
                 #   u_pad_hos[n] = 2*u[-1] - u[-1-n], n = 0,1,2,...
                 #   
                 # where u_pad_los[n] is the nth padded  actuator zone at the low edge
                 # and u_pad_hos[n] is the nth padded actuator zone at the high edge.
-                # This padding mode will affect the first  and last n_pad columns of G
+                # This padding mode will affect the first and last n_pad columns of G
                 
                 # The required change to the first columns of G
                 g_hat = G_hat[:,0] 
@@ -303,7 +372,6 @@ class CDProcessModel:
     
             G = G_hat
    
-
 
         # round small leading and trailing values to zero
         epsilon = 0.001*g
