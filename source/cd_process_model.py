@@ -9,14 +9,49 @@ import numpy as np
 class CDProcessModel:
     '''
     The cdProcessModel class impolements the CD Process Model Object which represents 
-    a MIMO (multiple inputs multiple outputs) CD Process.
+    a MIMO (multiple inputs multiple outputs) CD Process. CD Process Model attributes 
+    are typically in the form of Ny x Nu matrices, where Ny is the number of measurement arrays
+    and Nu is the the number of CD actuator beams. Each element in a Ny x Nu matrice corresponds to a 
+    model attribute for a particular CD Actuator beam - CD Measurement array pair. 
 
     Calling Syntax:
 
     Input Parameters:
-    cd_process_model_dict - This is a dictionary containing the following cd process model attributes
-    Nu -                    Number of CD actuator beams
-    Ny -                    Number of CD measurement arrays
+    cd_process_model_dict -     A dictionary containing the following cd process model attributes
+    cd_system_obj -             A CDSystem object, see the CDSystem class
+    cd_actuators_obj_lst -      A List of CDActuator objects, see the CDActuator class
+    cd_measurements_obj_lst -   A List of CDMeasurement objects, see the CDMeasurement class
+    Nu -                        Number of CD actuator beams
+    Ny -                        Number of CD measurement arrays
+
+    Class Attributes:
+    Nu -                        Number of CD actuator beams
+    Ny -                        Number of CD measurement arrays
+    gain -                      A Ny x Nu matrix (nested list) of CD process model gains
+    width -                     A Ny x Nu matrix (nested list) of CD process model widths
+    attenuation -               A Ny x Nu matrix (nested list) of CD process model attenuations
+    divergence -                A Ny x Nu matrix (nested list) of CD process model divergences
+    response_type -             A Ny x Nu matrix (nested list) of CD process model types (functions), 
+                                'odd' or 'even'. The even type is the most common and is used for all 
+                                CD Processes except for fiber orientation, which uses the 'odd' model. 
+    edge_padding_mode           A Ny x Nu matrix (nested list) of CD actuator beam (array) padding modes,
+                                can be None, 'average', 'linear', or 'reflection'. The default is None. Edge
+                                padding is typically only used for fiber orientation process models.
+    zba -                       A Ny x Nu matrix (nested list) of Zone Boundary Arrays.
+    G -                         A Ny x Nu matrix (nested list) of CD Process Model matrices (nupy 2D arrays), each G[i][j]
+                                matrice is of dimension my x nuj, where my is the number of CD bins and 
+                                nui is the number of CD actuator zones in CD actuator beam j.
+    
+    Class Methods:
+    response_type_mimo_build    -   builds the response_type attribute
+    edge_padding_mode_mimo_build -  builds the edge_padding_mode attribute
+    zba_mimo_build -                builds the zba attribute
+    G_mimo_build -                  builds the G attribute
+    zba_calc -                      calculates a zba[i][j] array
+    cd_response_matrix_calc -       calculates a G[i][j] matrix 
+
+
+                                
     '''
 
     def __init__(self, cd_process_model_dict, cd_system_obj, cd_actuators_obj_lst, 
@@ -28,6 +63,11 @@ class CDProcessModel:
         self.Nu = Nu
         self.gain =  cd_process_model_dict.get('gain')
         self.width = cd_process_model_dict.get('width')
+        self.width_in_bins = np.array(np.zeros((Ny, Nu))).tolist()
+        # need to convert the width from eng. units to cd bins
+        for i in range(Ny):
+            for j in range(Nu):
+                self.width_in_bins[i][j] = self.width[i][j]/cd_system_obj.bin_width
         self.attenuation = cd_process_model_dict.get('attenuation')
         self.divergence = cd_process_model_dict.get('divergence')
         
@@ -38,15 +78,9 @@ class CDProcessModel:
         
         print('CDProcessModel Class Constructor')
         print('process model gain =', self.gain)
-        print('process model width =', self.width)
-        print('num cols of the zba matrix List:', len(self.zba))
-        print('num rows of the zba matrix List:', len(self.zba[0]))
-        print('zba_matrix[0][0] =', self.zba[0][0])
-        print('zba_matrix[0][1] =', self.zba[0][1])
-        print('zba_matrix[1][0] =', self.zba[1][0])
-        print('zba_matrix[1][1] =', self.zba[1][1])
-        print('zba_matrix[2][0] =', self.zba[2][0])
-        print('zba_matrix[2][1] =', self.zba[2][1])
+        print('process model width in eng units =', self.width)
+        print('process model width in bins =', self.width_in_bins)
+      
 
 
     def response_type_mimo_build(self, cd_process_model_dict):
@@ -87,8 +121,6 @@ class CDProcessModel:
                     edge_padding_mode_mimo[i][j] = None
         return  edge_padding_mode_mimo
 
-
-
     def zba_mimo_build(self, cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny):
         '''
         zba_mimo_build builds the zba matrix for the Ny x Nu mimo system. It returns a nested 2D List (matrix) of zba arrays.
@@ -113,7 +145,7 @@ class CDProcessModel:
         Ny = self.Ny
         Nu = self.Nu
         g = self.gain
-        w = self.width
+        w = self.width_in_bins
         a = self.attenuation
         d = self.divergence
         zba = self.zba
@@ -125,11 +157,10 @@ class CDProcessModel:
             for j in range(Nu):
                 nu = cd_actuators_obj_lst[j].resolution
                 print('Building G_mimo for actuator', cd_actuators_obj_lst[j].name, 'and measurement', cd_measurements_obj_lst[i].name)
-                G_mimo[i][j] = CDProcessModel.cd_response_matrix_build(zba[i][j], my, nu, g[i][j], w[i][j], a[i][j], d[i][j], 
+                G_mimo[i][j] = CDProcessModel.cd_response_matrix_calc(zba[i][j], my, nu, g[i][j], w[i][j], a[i][j], d[i][j], 
                                                                  response_type[i][j], edge_padding_mode[i][j])
         return G_mimo
 
-    
     @staticmethod
     def zba_calc(los, hos, loa, hoa, bin_width, act_width_array):
         '''
@@ -170,9 +201,9 @@ class CDProcessModel:
         return zba
     
     @staticmethod
-    def cd_response_matrix_build(zba, my, nu, g, w, a = 0, d = 0, response_type = 'even', edge_padding_mode = None):
+    def cd_response_matrix_calc(zba, my, nu, g, w, a = 0, d = 0, response_type = 'even', edge_padding_mode = None):
         '''
-        Builds the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
+        Calculates the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
         The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
         actuator zones.
 
@@ -186,14 +217,14 @@ class CDProcessModel:
         Experion MX CD Controls User Manual. 
 
         Calling Syntax:
-        G = cd_response_matrix_build(zba, my, nu, g, w, a = None, d = None, response_type = 'even', edge_padding_mode = None)
+        G = cd_response_matrix_calc(zba, my, nu, g, w, a = None, d = None, response_type = 'even', edge_padding_mode = None)
 
         Inputs:
         zba -           the zone boundary array
         my -            number of cd bins       
         nu -            number of cd actuator zones
         g -             model gain
-        w -             model width
+        w -             model width in cd bins
         a -             model attenuation (optional, only used in the even model, defaults to 0)
         d -             model divergence (optional, only used in the even model, defaults to 0)
         response_type   can be 'even' or 'odd' (optional, defaults to 'even')
@@ -281,7 +312,7 @@ class CDProcessModel:
             print('augmented zba =', zba_a)
 
             # Calculate the augmented response matrix
-            G_aug =  CDProcessModel.cd_response_matrix_build(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type)
+            G_aug =  CDProcessModel.cd_response_matrix_calc(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type)
             print('shape of G_aug:', np.shape(G_aug))
             print('G_aug[:,0,2] = ', G_aug[:,0:3])
             print('G_aug[:,33:35] = ', G_aug[:,33:36])

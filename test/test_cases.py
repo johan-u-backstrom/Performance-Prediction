@@ -178,8 +178,8 @@ def test_case_5():
     Testing of the traditional CD response model matrix (damped cosine). There is a matching test case
     in Matlab that provides the expected result.
     '''
-    my = 100
-    nu = 30
+    my = int(100)
+    nu = int(30)
     g = 1
     w = 9
     a = 1.2
@@ -187,7 +187,7 @@ def test_case_5():
     zba = np.linspace(4.8, 95.2, nu+1)
     response_type = 'even'
    
-    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type, a, d)
+    G = CDProcessModel.cd_response_matrix_calc(zba, my, nu, g, w, a, d, response_type)
     print('G[:,0] =', G[:,0])
     [fig, ax] = plt.subplots()
     ax.plot(G[:,0])
@@ -202,16 +202,16 @@ def test_case_6():
     Testing of the fiber orientation response model matrix (odd response). There is a matching test case
     in Matlab that provides the expected result.
     '''
-    my = 120
-    nu = 30
-    g = 1
-    w = 9
-    a = 1.2
-    d = 0.3
-    zba = np.linspace(2, 122, nu+1)
+    my = 580
+    nu = 58
+    g = 0.185
+    w = 50
+    a = 4
+    d = 0
+    zba = np.linspace(25.6, 558.98, nu+1)
     response_type = 'odd'
-   
-    G = CDProcessModel.cd_response_matrix_build(g,w, zba, my, nu, response_type)
+    edge_padding_mode = 'reflection'
+    G = CDProcessModel.cd_response_matrix_calc(zba, my, nu, g, w, a, d, response_type, edge_padding_mode)
     print('G[:,0] =', G[:,0])
     [fig, ax] = plt.subplots()
     ax.plot(G[:,0])
@@ -257,7 +257,7 @@ def test_case_8():
     response_type = 'odd'
     edge_padding_mode = 'reflection'
    
-    G = CDProcessModel.cd_response_matrix_build(zba, my, nu,g,w,response_type = response_type, edge_padding_mode = edge_padding_mode)
+    G = CDProcessModel.cd_response_matrix_calc(zba, my, nu,g,w,response_type = response_type, edge_padding_mode = edge_padding_mode)
     print('G[:,0] =', G[:,0])
     
     [fig, ax] = plt.subplots()
@@ -277,3 +277,224 @@ def test_case_8():
     plt.title('G')
 
     plt.show()   
+
+def test_case_9():
+    '''
+    test the building of the G matrices for the CD mimo system.
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
+
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+
+    # Load CD-MPC tuning data as Dict
+    data_file = 'cdMpcTuning.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_mpc_tuning_data = json.load(f)
+    
+    print('Dict length:', len(cd_mpc_tuning_data))
+    pprint.pprint(cd_mpc_tuning_data)
+    
+    # Load the G_mimo matrix struct generated from matlab
+    data_file = 'G_mimo.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        G_mimo = json.load(f)
+    print('rows of G_mimo from matlab:', len(G_mimo))
+    print('cols of G_mimo from matlab:', len(G_mimo[0]))
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    G = cd_performance_prediction.cd_process_model.G
+    #G_f_matlab = np.array(G_f_matlab)
+    #G_f_diff = G_f_matlab - G_f
+    print('Printing of cd_performance_prediction object attributes')
+    Nu = cd_performance_prediction.Nu
+    Ny = cd_performance_prediction.Ny
+    print('Nu =', Nu)
+    print('Ny =', Ny)
+
+     # Plot the G matrices from Matlab
+    for i in range(Ny):
+        for j in range(Nu):
+            G_ij = np.array(G_mimo[i][j].get('G'))
+            (rows, cols) = G_ij.shape
+            print('G_ij min =', np.min(G_ij))
+            print('G_ij max = ', np.max(G_ij))
+            print('G_ij rows =', rows)
+            print('G_ij cols = ', cols)
+            [fig, ax] = plt.subplots()
+            ax.plot(G_ij)
+            title_str = 'G_matlab' + '(' + str(i) + ',' + str(j) + ')'
+            plt.title(title_str)
+
+    # Plot the G matrices 
+    for i in range(Ny):
+        for j in range(Nu):
+            G_ij = cd_performance_prediction.cd_process_model.G[i][j]
+            (rows, cols) = G_ij.shape
+            print('G_ij min =', np.min(G_ij))
+            print('G_ij max = ', np.max(G_ij))
+            print('G_ij rows =', rows)
+            print('G_ij cols = ', cols)
+            [fig, ax] = plt.subplots()
+            ax.plot(G_ij)
+            title_str = 'G' + '(' + str(i) + ',' + str(j) + ')'
+            plt.title(title_str)
+   
+    plt.show()
+
+
+
+def test_case_10():
+    '''
+    test the building of the full G matrix G_f for the CD mimo system.
+    This matrix is called ssGainMatrix in the matlab code.
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
+
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+    
+    # Load CD-MPC tuning data as Dict
+    data_file = 'cdMpcTuning.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_mpc_tuning_data = json.load(f)
+    
+    print('Dict length:', len(cd_mpc_tuning_data))
+    pprint.pprint(cd_mpc_tuning_data)
+
+    # Load the ssGainMatrix generated from matlab
+    data_file = 'ssGainMatrix.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        G_f_matlab = json.load(f)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    G_f = cd_performance_prediction.cd_mpc.G_f
+    G_f_matlab = np.array(G_f_matlab)
+    G_f_diff = G_f_matlab - G_f
+    print('Printing of cd_performance_prediction object attributes')
+    print('Nu =', cd_performance_prediction.Nu)
+    print('Ny =', cd_performance_prediction.Ny)
+    print('G_f =', G_f)
+    print('G_f min =', np.min(G_f))
+    print('G_f max = ', np.max(G_f))
+    
+    (rows, cols) = G_f.shape
+    print('G_f rows =', rows)
+    print('G_f cols = ', cols)
+
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, G_f_matlab, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('G_f_matlab')
+
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, G_f, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('G_f')
+
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, G_f_diff, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('G_f_diff')
+
+    plt.show()
