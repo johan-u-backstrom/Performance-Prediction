@@ -21,20 +21,22 @@ class CDMPC:
     cd_process_model -      A cd_process_model object
 
     Class Attributes:
-    G_f -                   The full (concatinated) G matrix for the mimo CD process 
-  
+    G_f -                   The full (concatinated) G matrix for the mimo CD process
+    Y_1                     The concatenated array of initial profiles, i.e. Y(k-1)
+    Q1 -                    The final full (concatinated) Q1 matrix used in the QP optimization
+    Q1_norm -               This is the normalization divisor used to calculate Q1, i.e Q1 = Q1_user/Q1_norm 
     Class Methods:
     build_G_full -          Builds the G_f matrix
-                              
+                                              
     '''
 
     def __init__(self, cd_mpc_tuning, cd_system, cd_actuators, cd_measurements, cd_process_model):
         '''
         The Class Constructor
-
-
         '''
         self.G_f = self.build_G_full(cd_process_model, cd_system, cd_actuators)
+        self.Y_1 = self.build_Y_1(cd_measurements)
+        self.Q1_norm = self.calc_Q1_norm(cd_measurements)
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
         '''
@@ -77,3 +79,31 @@ class CDMPC:
         
         return G_f
         
+    def build_Y_1(self, cd_measurements):
+        '''
+        Builds the concatenated initial Y array, Y(k-1) or Y_1
+        '''
+        # initialize Y_1
+        Ny = len(cd_measurements)
+        mY = 0
+        for i in range(Ny):
+            mY += cd_measurements[i].resolution
+        Y_1 = np.zeros(mY)
+
+        # build Y_1
+        for i in range(Ny):
+            my = cd_measurements[i].resolution
+            Y_1[i*my:(i+1)*my] = cd_measurements[i].initial_profile
+        
+        return Y_1
+    
+    def calc_Q1_norm(self, cd_measurements):
+        '''
+        Calculates the Q1_norm divisors used for normalizing Q1 provided by the 
+        user: Q1_user.
+        '''
+        Ny = len(cd_measurements)
+        Q1_norm = np.array(np.ones(Ny))
+       # for i in range(Ny):
+       #     Q1_norm[i] = cd_measurements[i]
+           

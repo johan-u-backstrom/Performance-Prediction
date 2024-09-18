@@ -247,17 +247,17 @@ def test_case_8():
     Testing of the actuator edge padding. There is a matching test case
     in Matlab that provides the expected result.
     '''
-    my = 128
-    nu = 30
-    g = 1
-    w = 9
-    a = 1.2
-    d = 0.3
-    zba = np.linspace(4.5, 124.5, nu+1)
-    response_type = 'odd'
+    my = 580
+    nu = 58
+    g = 0.185
+    w = 50
+    a = 4.0
+    d = 0
+    zba = np.linspace(25.5, 558.98, nu+1)
+    response_type = 'damped_sin'
     edge_padding_mode = 'reflection'
    
-    G = CDProcessModel.cd_response_matrix_calc(zba, my, nu,g,w,response_type = response_type, edge_padding_mode = edge_padding_mode)
+    G = CDProcessModel.cd_response_matrix_calc(zba, my, nu, g, w, a = a, d = d, response_type = response_type, edge_padding_mode = edge_padding_mode)
     print('G[:,0] =', G[:,0])
     
     [fig, ax] = plt.subplots()
@@ -390,8 +390,6 @@ def test_case_9():
    
     plt.show()
 
-
-
 def test_case_10():
     '''
     test the building of the full G matrix G_f for the CD mimo system.
@@ -496,5 +494,82 @@ def test_case_10():
     surf = ax.plot_surface(X, Y, G_f_diff, cmap = 'coolwarm',linewidth = 0, antialiased = False)
     fig.colorbar(surf, shrink=0.5, aspect=5)
     plt.title('G_f_diff')
+
+    plt.show()
+
+def test_case_11():
+    '''
+    Tests the building of Q1
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
+
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+    
+    # Load CD-MPC tuning data as Dict
+    data_file = 'cdMpcTuning.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_mpc_tuning_data = json.load(f)
+    
+    print('Dict length:', len(cd_mpc_tuning_data))
+    pprint.pprint(cd_mpc_tuning_data)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    Y_1 = cd_performance_prediction.cd_mpc.Y_1
+    print('Y(k-1) =', Y_1)
+    print('Y(k-1) length:', len(Y_1))
+
+    [fig, ax] = plt.subplots()
+    ax.plot(Y_1)
+    title_str = 'Y(k-1)' 
+    plt.title(title_str)
 
     plt.show()

@@ -32,8 +32,8 @@ class CDProcessModel:
     attenuation -               A Ny x Nu matrix (nested list) of CD process model attenuations
     divergence -                A Ny x Nu matrix (nested list) of CD process model divergences
     response_type -             A Ny x Nu matrix (nested list) of CD process model types (functions), 
-                                'odd' or 'even'. The even type is the most common and is used for all 
-                                CD Processes except for fiber orientation, which uses the 'odd' model. 
+                                'damped_cos', 'damped_sin', 'inv_prop_decay'. The damped_cos type is the most common and is used for all 
+                                CD Processes except for fiber orientation, which uses one of the other two models. 
     edge_padding_mode           A Ny x Nu matrix (nested list) of CD actuator beam (array) padding modes,
                                 can be None, 'average', 'linear', or 'reflection'. The default is None. Edge
                                 padding is typically only used for fiber orientation process models.
@@ -95,9 +95,12 @@ class CDProcessModel:
         for i in range(Ny):
             for j in range(Nu):
                 if resp_shape[i][j] == 0:
-                    response_type_mimo[i][j] = 'even'
+                    response_type_mimo[i][j] = 'damped_cos'
                 elif resp_shape[i][j] == 1:
-                    response_type_mimo[i][j] = 'odd'
+                    response_type_mimo[i][j] = 'damped_sin'
+                elif resp_shape[i][j] == 2:
+                    response_type_mimo[i][j] = 'inv_prop_decay'
+
         return response_type_mimo
 
     def edge_padding_mode_mimo_build(self, cd_process_model_dict):
@@ -201,7 +204,7 @@ class CDProcessModel:
         return zba
     
     @staticmethod
-    def cd_response_matrix_calc(zba, my, nu, g, w, a = 0, d = 0, response_type = 'even', edge_padding_mode = None):
+    def cd_response_matrix_calc(zba, my, nu, g, w, a = 0.0, d = 0.0, response_type = 'damped_cos', edge_padding_mode = None, caller = None):
         '''
         Calculates the cd (spatial) response matrix G for a CD actuator beam - CD measurement array pair.
         The dimension of G is my x nu, where my is the number of CD bins and nu is the number of 
@@ -227,8 +230,10 @@ class CDProcessModel:
         w -             model width in cd bins
         a -             model attenuation (optional, only used in the even model, defaults to 0)
         d -             model divergence (optional, only used in the even model, defaults to 0)
-        response_type   can be 'even' or 'odd' (optional, defaults to 'even')
+        response_type   can be 'damped_cos', 'damped_sin', 'inv_prop_decay'. The damped_cos type is the most common and is used for all 
+                        CD Processes except for fiber orientation, which uses one of the other two models. 
         edge_padding    Optional, can be  None, 'average', 'linear', or 'reflection', defaults to None
+        caller -        Can be 'edge_padding', default is None. To handle the strange Fiber Orientation logic in the matlab code.
        
 
         Outputs:
@@ -237,6 +242,18 @@ class CDProcessModel:
         G = np.zeros((my, nu))
         eps = np.finfo(float).eps
 
+        # For fiber orientation models, the original matlab code
+        # always uses the inv_prop_decay model for the sheet and only
+        # uses the user selected response_type for the edge padding. 
+        if caller == None and response_type == 'damped_sin':
+            # The caller is external, i.e. main call to the function
+            response_type_used = 'inv_prop_decay'  # force the inv_prop_decay model for the sheet
+        elif caller == 'edge_padding':
+            # It is a recursive call from the edge padding logic below
+            # the user selected response_type is used
+            response_type_used = response_type
+          
+         
         # zba midpoints
         zba_c = np.zeros(nu)
         for i in range(nu):
@@ -248,12 +265,17 @@ class CDProcessModel:
         #
         # The response model
         #
-        if response_type == 'even':
+        if response_type_used == 'damped_cos':
             # Dimitri's Model
             for i in range(nu):
                 G[:,i] = (g/2)*(np.exp(-a*(((x - zba_c[i] - d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] - d*w)/w) + 
                                 np.exp(-a*(((x - zba_c[i] + d*w)/w)**2)) * np.cos(np.pi*(x - zba_c[i] + d*w)/w))
-        elif response_type == 'odd':   
+        elif response_type_used == 'damped_sin':
+            # Johan's original Fiber Orientation Model
+            for i in range(nu):
+                G[:,i] = (g/2)*(np.exp(-a*(((x - zba_c[i] - d*w)/w)**2)) * np.sin(np.pi*(x - zba_c[i] - d*w)/w) + 
+                                np.exp(-a*(((x - zba_c[i] + d*w)/w)**2)) * np.sin(np.pi*(x - zba_c[i] + d*w)/w))
+        elif response_type_used == 'inv_prop_decay':   
             # Danlei's Fiber Orinetation Model
             for i in range(nu):
                 # find the location of CD coordinates where x-ZBAc(i) == 0, to prevent division
@@ -312,7 +334,7 @@ class CDProcessModel:
             print('augmented zba =', zba_a)
 
             # Calculate the augmented response matrix
-            G_aug =  CDProcessModel.cd_response_matrix_calc(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type)
+            G_aug =  CDProcessModel.cd_response_matrix_calc(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type, caller = 'edge_padding')
             print('shape of G_aug:', np.shape(G_aug))
             print('G_aug[:,0,2] = ', G_aug[:,0:3])
             print('G_aug[:,33:35] = ', G_aug[:,33:36])
