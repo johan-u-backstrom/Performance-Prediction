@@ -255,8 +255,9 @@ def test_case_8():
     d = 0
     zba = np.linspace(25.5, 558.98, nu+1)
     response_type = 'damped_sin'
+    #response_type = 'damped_cos'
     edge_padding_mode = 'reflection'
-   
+    #edge_padding_mode = None
     G = CDProcessModel.cd_response_matrix_calc(zba, my, nu, g, w, a = a, d = d, response_type = response_type, edge_padding_mode = edge_padding_mode)
     print('G[:,0] =', G[:,0])
     
