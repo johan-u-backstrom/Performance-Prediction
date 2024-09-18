@@ -245,7 +245,10 @@ class CDProcessModel:
         # For fiber orientation models, the original matlab code
         # always uses the inv_prop_decay model for the sheet and only
         # uses the user selected response_type for the edge padding. 
-        if caller == None and response_type == 'damped_sin':
+        if caller == None and response_type == 'dampled_cos':
+            # The most common external call, i.e. not a fiber orientation model
+            response_type_used = response_type
+        elif caller == None and response_type == 'damped_sin':
             # The caller is external, i.e. main call to the function
             response_type_used = 'inv_prop_decay'  # force the inv_prop_decay model for the sheet
         elif caller == 'edge_padding':
