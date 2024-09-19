@@ -28,6 +28,7 @@ class CDActuator:
         self.width_array = cd_actuator_dict.get('widthArray')
         self.low_offset = cd_actuator_dict.get('lowOffset')
         self.high_offset = cd_actuator_dict.get('highOffset')
+        self.initial_profile = cd_actuator_dict.get('initialProfile')
 
         print('CDActuator Class Constructor')
         print('CD actuator name:', self.name)

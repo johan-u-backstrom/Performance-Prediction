@@ -565,12 +565,44 @@ def test_case_11():
     cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
     
     Y_1 = cd_performance_prediction.cd_mpc.Y_1
-    print('Y(k-1) =', Y_1)
+    U_1 = cd_performance_prediction.cd_mpc.U_1
+    Y_d = cd_performance_prediction.cd_mpc.Y_d
+
     print('Y(k-1) length:', len(Y_1))
+    print('U(k-1) length:', len(U_1))
+    print('Y_d(k-1) length:', len(Y_d))
+
+    for cd_measurement in cd_performance_prediction.cd_measurements:
+        print('first valid index for ' + cd_measurement.name + ' is ', cd_measurement.first_valid_index)
+        print('last valid index for ' + cd_measurement.name + ' is ', cd_measurement.last_valid_index)
+        print('Max expected error for ' + cd_measurement.name + ' is ', cd_measurement.max_expected_error)
+        print('q1 normalization for ' + cd_measurement.name + ' is ', cd_measurement.q1_norm)
+        print('q1 for ' + cd_measurement.name + ' is ', cd_measurement.q1)
+
 
     [fig, ax] = plt.subplots()
     ax.plot(Y_1)
     title_str = 'Y(k-1)' 
     plt.title(title_str)
 
+    [fig, ax] = plt.subplots()
+    ax.plot(U_1)
+    title_str = 'U(k-1)' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(Y_d)
+    title_str = 'Y_d' 
+    plt.title(title_str)
+
+    for cd_measurement in cd_performance_prediction.cd_measurements:
+        y_d = cd_measurement.disturbance_profile
+        title_str = cd_measurement.name + ' disturbance profile'
+        
+        [fig, ax] = plt.subplots()
+        ax.plot(y_d)
+        plt.title(title_str)
+
     plt.show()
+
+

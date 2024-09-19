@@ -22,12 +22,21 @@ class CDMPC:
 
     Class Attributes:
     G_f -                   The full (concatinated) G matrix for the mimo CD process
-    Y_1                     The concatenated array of initial profiles, i.e. Y(k-1)
+    Y_1                     The concatenated array of initial measurement profiles, i.e. Y(k-1)
+    U_1                     The concatenated array of initial actuator profiles, i.e. U(k-1)
+    Y_d                     The concatenated distrubance array Y_d
     Q1 -                    The final full (concatinated) Q1 matrix used in the QP optimization
-    Q1_norm -               This is the normalization divisor used to calculate Q1, i.e Q1 = Q1_user/Q1_norm 
+   
     Class Methods:
     build_G_full -          Builds the G_f matrix
-                                              
+    build_Y_1               Builds the Y(k-1) array
+    build_U_1               Builds the U(k-1) array  
+    calc_Y_d                Calculates the Y_d array   
+    update_y_d              Updates the disturbance_profile in the CDMeasurement objects
+    update_max_exp_e        Updates the max_expected_error in the CDMeasurement objects
+    update_q1_norm          Updates the q1 normalization divisor in the CDMeasurement objects
+    update_q1               Updates the q1 measurement weight in the CDMeasurement objects
+
     '''
 
     def __init__(self, cd_mpc_tuning, cd_system, cd_actuators, cd_measurements, cd_process_model):
@@ -36,7 +45,13 @@ class CDMPC:
         '''
         self.G_f = self.build_G_full(cd_process_model, cd_system, cd_actuators)
         self.Y_1 = self.build_Y_1(cd_measurements)
-        self.Q1_norm = self.calc_Q1_norm(cd_measurements)
+        self.U_1 =  self.build_U_1(cd_actuators)
+        self.Y_d = self.calc_Y_d(self.Y_1, self.U_1, self.G_f)
+        self.update_y_d(self.Y_d, cd_measurements)  # Updates the CDMeasurement objects 
+        self.update_max_exp_e(cd_measurements)      # Updates the CDMeasurement objects 
+        self.update_q1_norm(cd_measurements)        # Updates the CDMeasurement objects
+        self.update_q1(cd_measurements)             # Updates the CDMeasurement objects
+    # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
         '''
@@ -81,29 +96,63 @@ class CDMPC:
         
     def build_Y_1(self, cd_measurements):
         '''
-        Builds the concatenated initial Y array, Y(k-1) or Y_1
+        Builds the concatenated  Y(k-1) array that is used in the QP problem formulation for 
+        the CD-MPC controller
         '''
-        # initialize Y_1
-        Ny = len(cd_measurements)
-        mY = 0
-        for i in range(Ny):
-            mY += cd_measurements[i].resolution
-        Y_1 = np.zeros(mY)
-
-        # build Y_1
-        for i in range(Ny):
-            my = cd_measurements[i].resolution
-            Y_1[i*my:(i+1)*my] = cd_measurements[i].initial_profile
-        
+        Y_1 = [] 
+        for cd_measurement in cd_measurements:
+            Y_1 += cd_measurement.initial_profile
+        Y_1 = np.array(Y_1)
         return Y_1
     
-    def calc_Q1_norm(self, cd_measurements):
+    def build_U_1(self, cd_actuators):
         '''
-        Calculates the Q1_norm divisors used for normalizing Q1 provided by the 
-        user: Q1_user.
+        Builds the concatenated U(k-1) array that is used in the QP problem formulation for 
+        the CD-MPC controller
+        '''
+        U_1 = [] 
+        for cd_actuator in cd_actuators:
+            U_1 += cd_actuator.initial_profile
+        U_1 = np.array(U_1)
+        return U_1
+
+    def calc_Y_d(self, Y_1, U_1, G_f):
+        '''
+        Calculates the concatenated distrurbance profile Y_d 
+        '''
+        Y_d = Y_1 - G_f@U_1
+        return Y_d
+    
+    def update_y_d(self, Y_d, cd_measurements):
+        '''
+        Extracts the individual measuremewnt disturbance profiles y_d[i]
+        from Y_d and updates the CDMeasurement objects
         '''
         Ny = len(cd_measurements)
-        Q1_norm = np.array(np.ones(Ny))
-       # for i in range(Ny):
-       #     Q1_norm[i] = cd_measurements[i]
-           
+        for i in range(Ny):
+            my = cd_measurements[i].resolution
+            y_d = Y_d[i*my:(i+1)*my]
+            cd_measurements[i].set_disturbance_profile(y_d)
+    
+    def update_max_exp_e(self, cd_measurements):
+        '''
+        Updates the maximum expected error for the CDMeasurement objects.
+        Note that this function should be called after update_y_d has been called.
+        '''
+        for cd_measurement in cd_measurements:
+            cd_measurement.calc_max_expected_error()
+
+    def update_q1_norm(self, cd_measurements):
+        '''
+        Updates the q1 normalization divisor for the CDMEasurement objects. 
+        Note that this function should be called after update_max_exp_e has been called. 
+        '''
+        for cd_measurement in cd_measurements:
+            cd_measurement.calc_q1_norm()
+   
+    def update_q1(self, cd_measurements):
+        '''
+        Updates the q1 measurement weight for the CDMeasurement object.
+        '''
+        for cd_measurement in cd_measurements:
+            cd_measurement.calc_q1()
