@@ -561,16 +561,26 @@ def test_case_11():
     print('Dict length:', len(cd_mpc_tuning_data))
     pprint.pprint(cd_mpc_tuning_data)
 
+    # Load the Matlab generated Q1 matrix
+    data_file = 'Q1.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        Q1_matlab = json.load(f)
+
     # Create a cd_performanc_prediction object
     cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
     
     Y_1 = cd_performance_prediction.cd_mpc.Y_1
     U_1 = cd_performance_prediction.cd_mpc.U_1
     Y_d = cd_performance_prediction.cd_mpc.Y_d
+    Q1 = cd_performance_prediction.cd_mpc.Q1
+    Q1_matlab = np.array(Q1_matlab)
+    Q1_diff = Q1_matlab - Q1
 
     print('Y(k-1) length:', len(Y_1))
     print('U(k-1) length:', len(U_1))
     print('Y_d(k-1) length:', len(Y_d))
+    print('shape of Q1 =', np.shape(Q1))
 
     for cd_measurement in cd_performance_prediction.cd_measurements:
         print('first valid index for ' + cd_measurement.name + ' is ', cd_measurement.first_valid_index)
@@ -602,6 +612,21 @@ def test_case_11():
         [fig, ax] = plt.subplots()
         ax.plot(y_d)
         plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q1))
+    title_str = 'Q1_diag' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q1_matlab))
+    title_str = 'Q1_diag from Matlab' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q1_diff))
+    title_str = 'Q1_diff' 
+    plt.title(title_str)
 
     plt.show()
 

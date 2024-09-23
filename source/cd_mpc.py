@@ -47,10 +47,13 @@ class CDMPC:
         self.Y_1 = self.build_Y_1(cd_measurements)
         self.U_1 =  self.build_U_1(cd_actuators)
         self.Y_d = self.calc_Y_d(self.Y_1, self.U_1, self.G_f)
+        # Calculate Q1 
         self.update_y_d(self.Y_d, cd_measurements)  # Updates the CDMeasurement objects 
         self.update_max_exp_e(cd_measurements)      # Updates the CDMeasurement objects 
         self.update_q1_norm(cd_measurements)        # Updates the CDMeasurement objects
         self.update_q1(cd_measurements)             # Updates the CDMeasurement objects
+        self.Q1 = self.calc_Q1(cd_measurements)
+
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -156,3 +159,16 @@ class CDMPC:
         '''
         for cd_measurement in cd_measurements:
             cd_measurement.calc_q1()
+    
+    def calc_Q1(self, cd_measurements):
+        '''
+        Calculates the measurement weighting matrix Q1 that defines the relative
+        importanace between the sheet properties and is used on the CD-MPC QP objective
+        function.
+        '''
+        Q1_list = []
+        for cd_measurement in cd_measurements:
+            Q1_list += [cd_measurement.q1]*cd_measurement.resolution 
+        Q1_array = np.array(Q1_list)
+        Q1 = np.diag(Q1_array)
+        return Q1
