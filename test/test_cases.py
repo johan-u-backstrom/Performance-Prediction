@@ -630,4 +630,78 @@ def test_case_11():
 
     plt.show()
 
+def test_case_12():
+    '''
+    Tests the building of the dynamic model
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
 
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+    
+    # Load CD-MPC tuning data as Dict
+    data_file = 'cdMpcTuning.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_mpc_tuning_data = json.load(f)
+    
+    print('Dict length:', len(cd_mpc_tuning_data))
+    pprint.pprint(cd_mpc_tuning_data)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    Tp = cd_performance_prediction.cd_process_model.time_constant
+    Ts = cd_performance_prediction.cd_process_model.sample_time
+    num = cd_performance_prediction.cd_process_model.num
+    den = cd_performance_prediction.cd_process_model.den
+
+    print('time constant matrix =', Tp)
+    print('sample time =', Ts)
+    print('numerator matrix =', num)
+    print('denominator matrix = ', den)

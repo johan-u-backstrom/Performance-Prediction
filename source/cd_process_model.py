@@ -14,7 +14,8 @@ class CDProcessModel:
     and Nu is the the number of CD actuator beams. Each element in a Ny x Nu matrice corresponds to a 
     model attribute for a particular CD Actuator beam - CD Measurement array pair. 
 
-    Calling Syntax:
+    Calling Syntax:             cd_process_model = CDProcessModel(cd_process_model_dict, cd_system_obj, cd_actuators_obj_lst, 
+                                                                  cd_measurements_obj_lst, Nu, Ny)
 
     Input Parameters:
     cd_process_model_dict -     A dictionary containing the following cd process model attributes
@@ -41,6 +42,10 @@ class CDProcessModel:
     G -                         A Ny x Nu matrix (nested list) of CD Process Model matrices (nupy 2D arrays), each G[i][j]
                                 matrice is of dimension my x nuj, where my is the number of CD bins and 
                                 nui is the number of CD actuator zones in CD actuator beam j.
+    time_constant -             A Ny x Nu matrix (nested list) of CD process constants
+    sample_time -               The CD-MPC control execution rate
+    num -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials
+    den -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials
     
     Class Methods:
     response_type_mimo_build    -   builds the response_type attribute
@@ -49,9 +54,8 @@ class CDProcessModel:
     G_mimo_build -                  builds the G attribute
     zba_calc -                      calculates a zba[i][j] array
     cd_response_matrix_calc -       calculates a G[i][j] matrix 
-
-
-                                
+    calc_dt_num_den -               calcualtes a discrete time numerator and denominator    
+    tf_mimo_build -                 builds the num and den attributes                                    
     '''
 
     def __init__(self, cd_process_model_dict, cd_system_obj, cd_actuators_obj_lst, 
@@ -59,8 +63,11 @@ class CDProcessModel:
         '''
         The Class Constructor
         '''
-        self.Ny = Ny
-        self.Nu = Nu
+        # Dimensions 
+        self.Ny = Ny    # number of measurement arrays
+        self.Nu = Nu    # number of cd actuator beams (arrays)
+
+        # Spatial model
         self.gain =  cd_process_model_dict.get('gain')
         self.width = cd_process_model_dict.get('width')
         self.width_in_bins = np.array(np.zeros((Ny, Nu))).tolist()
@@ -76,6 +83,12 @@ class CDProcessModel:
         self.zba = self.zba_mimo_build(cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny)
         self.G = self.G_mimo_build(cd_actuators_obj_lst, cd_measurements_obj_lst)
         
+        # Dynamic model
+        self.time_constant = cd_process_model_dict.get('timeConstant')
+        self.time_delay = cd_process_model_dict.get('timeDelay')
+        self.sample_time = cd_system_obj.sample_time
+        [self.num, self.den] = self.tf_mimo_build(self.time_constant, self.sample_time, self.Ny, self.Nu)
+
         print('CDProcessModel Class Constructor')
         print('process model gain =', self.gain)
         print('process model width in eng units =', self.width)
@@ -439,5 +452,53 @@ class CDProcessModel:
                 G[last_valid+1:my, i] = np.zeros(my-1-last_valid)
         
         return G
+    
+    @staticmethod
+    def calc_dt_num_den(Tp, Ts):
+        '''
+        builds the transfer function numerator and denominator polynomials for a 
+        first order system in the disrete time (z) domain.
 
-      
+        Calling Syntax: [num, den] = build_dt_num_den(Tp, Ts)
+
+        Input parameters:
+        Tp -            time constant (continuous time)
+        Ts -            sample time (continuous time)
+
+        Output parametersç
+        num -           discrete time numerator polynomial (in the z domain)
+        den -           discrete time denominator polynomial (in the z domain)
+        '''
+        num = np.zeros(2)
+        den = np.zeros(2)
+
+        a = np.exp(-Ts/Tp)
+        num[1] = 1+a
+        den[0] = 1
+        den[1] = a
+
+        return num, den
+    
+    def tf_mimo_build(self, Tp_mimo, Ts, Ny, Nu):
+        '''
+        builds the Ny x Nu transfer function in disctrete time in form of a
+        a nested list of numerator and denomincator polynomials.
+
+        Calling syntax: [num_mimo, den_mimo] = buid_tf_mimo(time_constant_matrix, sample_time)
+
+        Input parameters:
+        Tp_mimo -           An Ny x Nu matrix (nested list) of time constants (in continuous time)
+        Ts -                The sample time for the mimo system
+        Ny -                Number of measurement arrays
+        Nu -                Number of cd actuator beams (arrays)
+        Output parameters:
+        num_mimo -          An Ny x Nu matrix (nested list) of discrete time numerator polynomials
+        den_mimo -          An Ny x Nu matrix (nested list) of discrete time denominator polynomials   
+        '''
+        num_mimo = np.zeros((Ny,Nu)).tolist()
+        den_mimo = np.zeros((Ny,Nu)).tolist()
+        for i in range(Ny):
+            for j in range(Nu):
+                [num_mimo[i][j], den_mimo[i][j]] = self.calc_dt_num_den(Tp_mimo[i][j], Ts)
+        return num_mimo, den_mimo
+    

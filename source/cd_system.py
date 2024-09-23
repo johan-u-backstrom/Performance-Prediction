@@ -25,7 +25,11 @@ class CDSystem:
         self.bin_width = cd_system_dict.get("binWidth")
         self.spatial_eng_units = cd_system_dict.get("spatialEngineeringUnits")
         self.spatial_disp_units = cd_system_dict.get("SpatialDisplayUnits")
+        self.sample_time = cd_system_dict.get('sampleTime')
+        self.temporal_eng_units = cd_system_dict.get('temporalEngineerinUnits')
+        self.temporal_disp_units = cd_system_dict.get('temporalDisplayUnits')
 
         print('CDSystem Class Constructor')
         print('bin width =', self.bin_width)
         print('number of cd bins =', self.number_of_cd_bins)
+        
