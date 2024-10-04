@@ -46,6 +46,9 @@ class CDProcessModel:
     sample_time -               The CD-MPC control execution rate
     num -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials
     den -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials
+    A -                         A Ny x Nu nested list of A matrices in the state space representation for the u->y system
+    B -                         A Ny x Nu nested list of B matrices in the state space representation for the u->y system
+    C -                         A Ny x Nu nested list of B matrices in the state space representation for the u->y system
     
     Class Methods:
     response_type_mimo_build    -   builds the response_type attribute
@@ -54,8 +57,9 @@ class CDProcessModel:
     G_mimo_build -                  builds the G attribute
     zba_calc -                      calculates a zba[i][j] array
     cd_response_matrix_calc -       calculates a G[i][j] matrix 
-    calc_dt_num_den -               calcualtes a discrete time numerator and denominator    
-    tf_mimo_build -                 builds the num and den attributes                                    
+    num_den_calc -                  calcualtes a discrete time numerator and denominator    
+    tf_mimo_build -                 builds the num and den attributes   
+    ss_mimo_buid -                  builds the A, B, and C attributes                               
     '''
 
     def __init__(self, cd_process_model_dict, cd_system_obj, cd_actuators_obj_lst, 
@@ -88,6 +92,9 @@ class CDProcessModel:
         self.time_delay = cd_process_model_dict.get('timeDelay')
         self.sample_time = cd_system_obj.sample_time
         [self.num, self.den] = self.tf_mimo_build()
+
+        # 2D State space model
+        [self.A, self.B, self.C] = self.ss_mimo_build()     
 
         print('CDProcessModel Class Constructor')
         print('process model gain =', self.gain)
@@ -187,10 +194,7 @@ class CDProcessModel:
         Calling syntax: [num_mimo, den_mimo] = buid_tf_mimo(time_constant_matrix, sample_time)
 
         Input parameters:
-        Tp_mimo -           An Ny x Nu matrix (nested list) of time constants (in continuous time)
-        Ts -                The sample time for the mimo system
-        Ny -                Number of measurement arrays
-        Nu -                Number of cd actuator beams (arrays)
+        None
         Output parameters:
         num_mimo -          An Ny x Nu matrix (nested list) of discrete time numerator polynomials
         den_mimo -          An Ny x Nu matrix (nested list) of discrete time denominator polynomials   
@@ -206,6 +210,33 @@ class CDProcessModel:
                 [num_mimo[i][j], den_mimo[i][j]] = self.num_den_calc(Tp_mimo[i][j], Ts)
         return num_mimo, den_mimo
     
+    def ss_mimo_build(self):
+        '''
+        Builds the Ny x Nu nested lists of the state space matrices A,B, and C for the u->y system
+
+        Calling Syntax: [A_mimo, B_mimo, C_mimo] = ss_mimo_buid()
+
+        Input parameters:
+        None
+
+        Output parameters:
+        A_mimo -        A Ny x Nu nested list of A matrices in the state space representation for the u->y system
+        B_mimo -        A Ny x Nu nested list of B matrices in the state space representation for the u->y system
+        C_mimo -        A Ny x Nu nested list of C matrices in the state space representation for the u->y system
+        '''
+        Ny = self.Ny
+        Nu = self.Nu
+        num_mimo = self.num
+        den_mimo = self.den
+        G_mimo = self.G
+        A_mimo = np.zeros((Ny,Nu)).tolist()
+        B_mimo = np.zeros((Ny,Nu)).tolist()
+        C_mimo = np.zeros((Ny,Nu)).tolist()
+        for i in range(Ny):
+            for j in range(Nu):
+                [A_mimo[i][j], B_mimo[i][j], C_mimo[i][j]] = self.tf2ss_calc(num_mimo[i][j], den_mimo[i][j], G_mimo[i][j])
+        return A_mimo, B_mimo, C_mimo
+
     @staticmethod
     def zba_calc(los, hos, loa, hoa, bin_width, act_width_array):
         '''
@@ -542,7 +573,7 @@ class CDProcessModel:
 
         A = np.zeros((ns*my, ns*my))
         B = np.zeros((ns*my, nu))
-        C = np.zeros((my, ns*nu))
+        C = np.zeros((my, ns*my))
         
         # Expand the dynamic state space model with the spatial decopling matrix
         for i in range(ns):

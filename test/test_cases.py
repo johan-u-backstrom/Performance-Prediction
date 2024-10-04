@@ -21,6 +21,72 @@ project_root_dir = pathlib.Path(test_dir).parent.resolve()
 data_dir = str(project_root_dir) + '/data'
 #print('The data directory path is:', data_dir)
 
+def load_performance_prediction_data():
+    '''
+    Loads the input data for the CDPerformancePrediction Class constructor
+    '''
+    # Load system data as Dict
+    data_file = 'system.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        system_data = json.load(f)
+    
+    print('List length:', len(system_data))
+    pprint.pprint(system_data)
+   
+    # Load cd actuators data as List of Dicts
+    data_file = 'cdActuators.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_actuators_data = json.load(f)
+    
+    print('List length:', len(cd_actuators_data))
+    print('Keys in first List element:')
+    for key in cd_actuators_data[0]:
+        print(key)
+
+    # Load cd measurements data as List of Dicts
+    data_file = 'cdMeasurements.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_measurements_data = json.load(f)
+    
+    print('List length:', len(cd_measurements_data))
+    print('Keys in first List element:')
+    for key in cd_measurements_data[0]:
+        print(key)
+
+    # Load process model data as Dict
+    data_file = 'cdProcessModel.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_process_model_data = json.load(f)
+    
+    print('Dict length:', len(cd_process_model_data))
+    pprint.pprint(cd_process_model_data)
+    
+    # Load CD-MPC tuning data as Dict
+    data_file = 'cdMpcTuning.json'
+    print('data_file = ', data_file)
+    data_file_path = data_dir + '/' + data_file
+   
+    with open(data_file_path, 'r') as f:
+        cd_mpc_tuning_data = json.load(f)
+    
+    print('Dict length:', len(cd_mpc_tuning_data))
+    pprint.pprint(cd_mpc_tuning_data)
+
+    return system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data
+
+
 def test_case_1(method = 'SLSQP'):
     '''
     test the QP module's solve function
@@ -114,56 +180,11 @@ def test_case_4():
     Test case 4 tests the CDPerformancePrediction class constructor.
     
     '''
-    # Load system data as Dict
-    data_file = 'system.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        system_data = json.load(f)
-    
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
-   
-    # Load cd actuators data as List of Dicts
-    data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_actuators_data = json.load(f)
-    
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
-
-    # Load cd measurements data as List of Dicts
-    data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_measurements_data = json.load(f)
-    
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
-
-    # Load process model data as Dict
-    data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_process_model_data = json.load(f)
-    
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
     # Create a cd_performanc_prediction object
-    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data)
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
     print('Printing of cd_performance_prediction object attributes')
     print('Nu =', cd_performance_prediction.Nu)
     print('Ny =', cd_performance_prediction.Ny)
@@ -284,65 +305,9 @@ def test_case_9():
     '''
     test the building of the G matrices for the CD mimo system.
     '''
-    # Load system data as Dict
-    data_file = 'system.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        system_data = json.load(f)
-    
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
-   
-    # Load cd actuators data as List of Dicts
-    data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_actuators_data = json.load(f)
-    
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
-    # Load cd measurements data as List of Dicts
-    data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_measurements_data = json.load(f)
-    
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
-
-    # Load process model data as Dict
-    data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_process_model_data = json.load(f)
-    
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
-
-    # Load CD-MPC tuning data as Dict
-    data_file = 'cdMpcTuning.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_mpc_tuning_data = json.load(f)
-    
-    print('Dict length:', len(cd_mpc_tuning_data))
-    pprint.pprint(cd_mpc_tuning_data)
-    
     # Load the G_mimo matrix struct generated from matlab
     data_file = 'G_mimo.json'
     print('data_file = ', data_file)
@@ -397,64 +362,8 @@ def test_case_10():
     test the building of the full G matrix G_f for the CD mimo system.
     This matrix is called ssGainMatrix in the matlab code.
     '''
-    # Load system data as Dict
-    data_file = 'system.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        system_data = json.load(f)
-    
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
-   
-    # Load cd actuators data as List of Dicts
-    data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_actuators_data = json.load(f)
-    
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
-
-    # Load cd measurements data as List of Dicts
-    data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_measurements_data = json.load(f)
-    
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
-
-    # Load process model data as Dict
-    data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_process_model_data = json.load(f)
-    
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
-    
-    # Load CD-MPC tuning data as Dict
-    data_file = 'cdMpcTuning.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_mpc_tuning_data = json.load(f)
-    
-    print('Dict length:', len(cd_mpc_tuning_data))
-    pprint.pprint(cd_mpc_tuning_data)
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
     # Load the ssGainMatrix generated from matlab
     data_file = 'ssGainMatrix.json'
@@ -503,64 +412,8 @@ def test_case_11():
     '''
     Tests the building of Q1
     '''
-    # Load system data as Dict
-    data_file = 'system.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        system_data = json.load(f)
-    
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
-   
-    # Load cd actuators data as List of Dicts
-    data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_actuators_data = json.load(f)
-    
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
-
-    # Load cd measurements data as List of Dicts
-    data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_measurements_data = json.load(f)
-    
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
-
-    # Load process model data as Dict
-    data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_process_model_data = json.load(f)
-    
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
-    
-    # Load CD-MPC tuning data as Dict
-    data_file = 'cdMpcTuning.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_mpc_tuning_data = json.load(f)
-    
-    print('Dict length:', len(cd_mpc_tuning_data))
-    pprint.pprint(cd_mpc_tuning_data)
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
     # Load the Matlab generated Q1 matrix
     data_file = 'Q1.json'
@@ -635,64 +488,8 @@ def test_case_12():
     '''
     Tests the building of the dynamic model
     '''
-    # Load system data as Dict
-    data_file = 'system.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        system_data = json.load(f)
-    
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
-   
-    # Load cd actuators data as List of Dicts
-    data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_actuators_data = json.load(f)
-    
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
-
-    # Load cd measurements data as List of Dicts
-    data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_measurements_data = json.load(f)
-    
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
-
-    # Load process model data as Dict
-    data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_process_model_data = json.load(f)
-    
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
-    
-    # Load CD-MPC tuning data as Dict
-    data_file = 'cdMpcTuning.json'
-    print('data_file = ', data_file)
-    data_file_path = data_dir + '/' + data_file
-   
-    with open(data_file_path, 'r') as f:
-        cd_mpc_tuning_data = json.load(f)
-    
-    print('Dict length:', len(cd_mpc_tuning_data))
-    pprint.pprint(cd_mpc_tuning_data)
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
     # Create a cd_performanc_prediction object
     cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
@@ -722,3 +519,57 @@ def test_case_13():
     print('A =', A)
     print('B =', B)
     print('C =', C)
+
+def test_case_14():
+    '''
+    testing of method ss_mimo_build in the CDProcessModel Class.
+    '''
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performance_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    # Check the results
+    A = cd_performance_prediction.cd_process_model.A
+    B = cd_performance_prediction.cd_process_model.B
+    C = cd_performance_prediction.cd_process_model.C
+    print('Shape of A:', np.shape(A))
+    print('Shape of B:', np.shape(B))
+    print('Shape of C:', np.shape(C))
+    print('top left 5 x 5 elements of C[2][1]:', C[2][1][0:5][0:5] )
+
+    # Plot A[2][1]
+    (rows, cols) = np.shape(A[2][1])
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, A[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('A[2][1]')
+
+
+     # Plot B[2][1]
+    (rows, cols) = np.shape(B[2][1])
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, B[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('B[2][1]')
+
+    [fig, ax] = plt.subplots()
+    ax.plot(B[2][1])
+    plt.title('B[2][1]')
+
+    # Plot C[2][1]
+    (rows, cols) = np.shape(C[2][1])
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, C[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('C[2][1]')
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(C[2][1]))
+    plt.title('Diagonal of C[2][1]')
+    
+    plt.show()
