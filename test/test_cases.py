@@ -4,6 +4,7 @@ Module for testing the Performance Prediction Project
 import json
 import pprint
 import numpy as np
+from scipy.linalg import toeplitz
 import matplotlib.pyplot as plt
 import pathlib
 import scipy.io as sio
@@ -705,3 +706,19 @@ def test_case_12():
     print('sample time =', Ts)
     print('numerator matrix =', num)
     print('denominator matrix = ', den)
+
+def test_case_13():
+    '''
+    testing of method tf2ss in the CDProcessModel Class. A matching 
+    test case is available in matlab for comparison. 
+    '''
+    Tp = 150
+    Ts = 20
+    G = toeplitz([1, 0.5, 0.1, 0, 0, 0])
+    [num, den] = CDProcessModel.num_den_calc(Tp, Ts)
+    [A, B, C] = CDProcessModel.tf2ss_calc(num, den, G)  
+
+    print('G =', G)
+    print('A =', A)
+    print('B =', B)
+    print('C =', C)

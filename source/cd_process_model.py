@@ -177,6 +177,29 @@ class CDProcessModel:
                                                                  response_type[i][j], edge_padding_mode[i][j])
         return G_mimo
 
+    def tf_mimo_build(self, Tp_mimo, Ts, Ny, Nu):
+        '''
+        builds the Ny x Nu transfer function in disctrete time in form of a
+        a nested list of numerator and denomincator polynomials.
+
+        Calling syntax: [num_mimo, den_mimo] = buid_tf_mimo(time_constant_matrix, sample_time)
+
+        Input parameters:
+        Tp_mimo -           An Ny x Nu matrix (nested list) of time constants (in continuous time)
+        Ts -                The sample time for the mimo system
+        Ny -                Number of measurement arrays
+        Nu -                Number of cd actuator beams (arrays)
+        Output parameters:
+        num_mimo -          An Ny x Nu matrix (nested list) of discrete time numerator polynomials
+        den_mimo -          An Ny x Nu matrix (nested list) of discrete time denominator polynomials   
+        '''
+        num_mimo = np.zeros((Ny,Nu)).tolist()
+        den_mimo = np.zeros((Ny,Nu)).tolist()
+        for i in range(Ny):
+            for j in range(Nu):
+                [num_mimo[i][j], den_mimo[i][j]] = self.num_den_calc(Tp_mimo[i][j], Ts)
+        return num_mimo, den_mimo
+    
     @staticmethod
     def zba_calc(los, hos, loa, hoa, bin_width, act_width_array):
         '''
@@ -454,12 +477,12 @@ class CDProcessModel:
         return G
     
     @staticmethod
-    def calc_dt_num_den(Tp, Ts):
+    def num_den_calc(Tp, Ts):
         '''
         builds the transfer function numerator and denominator polynomials for a 
         first order system in the disrete time (z) domain.
 
-        Calling Syntax: [num, den] = build_dt_num_den(Tp, Ts)
+        Calling Syntax: [num, den] = num_den_calc(Tp, Ts)
 
         Input parameters:
         Tp -            time constant (continuous time)
@@ -472,33 +495,73 @@ class CDProcessModel:
         num = np.zeros(2)
         den = np.zeros(2)
 
-        a = np.exp(-Ts/Tp)
+        a = -np.exp(-Ts/Tp)
+        # Sometimes the user will put in a small time constant to reflect that 
+        # it is a steady state prediction, e.g. Tp = 1. In such cases a is close to zero
+        # but not quite. The user's intent is to have a zero dymaic system, so set a = 0.
+        if abs(a) < 1e-6:
+            a = 0.0
         num[1] = 1+a
         den[0] = 1
         den[1] = a
 
         return num, den
     
-    def tf_mimo_build(self, Tp_mimo, Ts, Ny, Nu):
+    @staticmethod
+    def tf2ss_calc(num, den, G):
         '''
-        builds the Ny x Nu transfer function in disctrete time in form of a
-        a nested list of numerator and denomincator polynomials.
+        converts transfer function model of an input-array output-array pair where the
+        dynamics are spatially invariant to a state space model. At this time, only first order systems 
+        are supported with no direct feedthrough, i.e. D = 0 and is not used. 
 
-        Calling syntax: [num_mimo, den_mimo] = buid_tf_mimo(time_constant_matrix, sample_time)
+        Calling syntax: [A,B,C] = tf2ss_calc(num,den,G)
 
-        Input parameters:
-        Tp_mimo -           An Ny x Nu matrix (nested list) of time constants (in continuous time)
-        Ts -                The sample time for the mimo system
-        Ny -                Number of measurement arrays
-        Nu -                Number of cd actuator beams (arrays)
-        Output parameters:
-        num_mimo -          An Ny x Nu matrix (nested list) of discrete time numerator polynomials
-        den_mimo -          An Ny x Nu matrix (nested list) of discrete time denominator polynomials   
+        Inputs:
+        num -           [1, b1], zeros-polynomial 
+        den -           [1, a1], poles-polynomial
+        G -             Spatial coupling matrix (size my x nu) 
+
+        Outputs:
+        A -             State space A matrix
+        B -             State space B matrix
+        C -             State space C matrix
         '''
-        num_mimo = np.zeros((Ny,Nu)).tolist()
-        den_mimo = np.zeros((Ny,Nu)).tolist()
-        for i in range(Ny):
-            for j in range(Nu):
-                [num_mimo[i][j], den_mimo[i][j]] = self.calc_dt_num_den(Tp_mimo[i][j], Ts)
-        return num_mimo, den_mimo
+        # The state space model of the dynamic systen
+        A_dyn = [-den[1]]
+        B_dyn = [1 + den[1]]
+        C_dyn = [1]
+      
+        (my, nu) = np.shape(G)        # Spatial system size
+        (ns,) = np.shape(A_dyn)       # Dynamic system size (number of dynamic states)
+
+        A = np.zeros((ns*my, ns*my))
+        B = np.zeros((ns*my, nu))
+        C = np.zeros((my, ns*nu))
+        
+        # Expand the dynamic state space model with the spatial decopling matrix
+        for i in range(ns):
+            B[i*my:i*my+my, 0:nu] = B_dyn[i]*G
+            C[0:my, i*my:i*my+my] = C_dyn[i]*np.eye(my, my)
+            A[i*my:i*my+my, i*my:i*my+my] = A_dyn[i]*np.eye(my, my)
+        
+        return A, B, C
     
+    @staticmethod 
+    def augmented_ss_calc(A, B, C):
+        '''
+        Calculates the augmented state space matrices that takes
+        delta u as system input instead of u.
+
+        Calling syntax: [Aa, Ba, Ca] = augmented_ss_calc(A, B, C);
+
+        Inputs: 
+        A -         Original state space matrix A for system u->y
+        B -         Original state space matrix A for system u->y
+        C -         Original state space matrix A for system u->y
+
+        Outputs: 
+        Aa -        New state space A matrix for system du->y    
+        Ba -        New state space B matrix for system du->y 
+        Ca -        New state space C matrix for system du->y 
+        '''
+        # To be implemented later
