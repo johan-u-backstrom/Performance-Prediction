@@ -80,21 +80,21 @@ class CDProcessModel:
         
         self.response_type = self.response_type_mimo_build(cd_process_model_dict)
         self.edge_padding_mode = self.edge_padding_mode_mimo_build(cd_process_model_dict)
-        self.zba = self.zba_mimo_build(cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny)
+        self.zba = self.zba_mimo_build(cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst)
         self.G = self.G_mimo_build(cd_actuators_obj_lst, cd_measurements_obj_lst)
         
         # Dynamic model
         self.time_constant = cd_process_model_dict.get('timeConstant')
         self.time_delay = cd_process_model_dict.get('timeDelay')
         self.sample_time = cd_system_obj.sample_time
-        [self.num, self.den] = self.tf_mimo_build(self.time_constant, self.sample_time, self.Ny, self.Nu)
+        [self.num, self.den] = self.tf_mimo_build()
 
         print('CDProcessModel Class Constructor')
         print('process model gain =', self.gain)
         print('process model width in eng units =', self.width)
         print('process model width in bins =', self.width_in_bins)
       
-
+        # END Constructor
 
     def response_type_mimo_build(self, cd_process_model_dict):
         '''
@@ -137,10 +137,12 @@ class CDProcessModel:
                     edge_padding_mode_mimo[i][j] = None
         return  edge_padding_mode_mimo
 
-    def zba_mimo_build(self, cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst, Nu, Ny):
+    def zba_mimo_build(self, cd_system_obj, cd_actuators_obj_lst, cd_measurements_obj_lst):
         '''
         zba_mimo_build builds the zba matrix for the Ny x Nu mimo system. It returns a nested 2D List (matrix) of zba arrays.
         '''
+        Nu = self.Nu
+        Ny = self.Ny
         zba_mimo = np.zeros((Ny, Nu)).tolist()
         bin_width = cd_system_obj.bin_width
         for i in range(Ny):
@@ -177,7 +179,7 @@ class CDProcessModel:
                                                                  response_type[i][j], edge_padding_mode[i][j])
         return G_mimo
 
-    def tf_mimo_build(self, Tp_mimo, Ts, Ny, Nu):
+    def tf_mimo_build(self):
         '''
         builds the Ny x Nu transfer function in disctrete time in form of a
         a nested list of numerator and denomincator polynomials.
@@ -193,6 +195,10 @@ class CDProcessModel:
         num_mimo -          An Ny x Nu matrix (nested list) of discrete time numerator polynomials
         den_mimo -          An Ny x Nu matrix (nested list) of discrete time denominator polynomials   
         '''
+        Tp_mimo = self.time_constant
+        Ts = self.sample_time
+        Ny = self.Ny
+        Nu = self.Nu
         num_mimo = np.zeros((Ny,Nu)).tolist()
         den_mimo = np.zeros((Ny,Nu)).tolist()
         for i in range(Ny):
