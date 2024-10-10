@@ -42,7 +42,8 @@ class CDProcessModel:
     G -                         A Ny x Nu matrix (nested list) of CD Process Model matrices (nupy 2D arrays), each G[i][j]
                                 matrice is of dimension my x nuj, where my is the number of CD bins and 
                                 nui is the number of CD actuator zones in CD actuator beam j.
-    time_constant -             A Ny x Nu matrix (nested list) of CD process constants
+    time_constant -             A Ny x Nu matrix (nested list) of CD process time constants
+    time_delay -                A Ny x Nu matrix (nested list) of CD process time delays
     sample_time -               The CD-MPC control execution rate
     num -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials
     den -                       A Ny x Nu matrix (nested list) of discrete time (z-domain) numerator polynomials

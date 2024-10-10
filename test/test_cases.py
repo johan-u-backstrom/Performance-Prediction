@@ -86,7 +86,6 @@ def load_performance_prediction_data():
 
     return system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data
 
-
 def test_case_1(method = 'SLSQP'):
     '''
     test the QP module's solve function
@@ -573,3 +572,17 @@ def test_case_14():
     plt.title('Diagonal of C[2][1]')
     
     plt.show()
+
+def test_case_15():
+    '''
+    Tests the calculation of the R matrix relating the Q3 weighting matrices in 
+    CD-MPC steady state prediction and the dynamic CD-MPC controller.
+    '''
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performance_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    R = cd_performance_prediction.cd_mpc.R
+    print('R =', R)

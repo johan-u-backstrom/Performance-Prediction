@@ -43,16 +43,23 @@ class CDMPC:
         '''
         The Class Constructor
         '''
+        # Class Attributes
+        self.Hu = cd_mpc_tuning.get('Hu')
+        self.Hp = cd_mpc_tuning.get('Hp')
         self.G_f = self.build_G_full(cd_process_model, cd_system, cd_actuators)
         self.Y_1 = self.build_Y_1(cd_measurements)
         self.U_1 =  self.build_U_1(cd_actuators)
         self.Y_d = self.calc_Y_d(self.Y_1, self.U_1, self.G_f)
+        
         # Calculate Q1 
         self.update_y_d(self.Y_d, cd_measurements)  # Updates the CDMeasurement objects 
         self.update_max_exp_e(cd_measurements)      # Updates the CDMeasurement objects 
         self.update_q1_norm(cd_measurements)        # Updates the CDMeasurement objects
         self.update_q1(cd_measurements)             # Updates the CDMeasurement objects
         self.Q1 = self.calc_Q1(cd_measurements)
+
+        # Calculate Q3
+        self.R = self.calc_ratio_matrix(cd_process_model)
 
     # END Constructor
 
@@ -172,3 +179,44 @@ class CDMPC:
         Q1_array = np.array(Q1_list)
         Q1 = np.diag(Q1_array)
         return Q1
+    
+    
+    def calc_ratio_matrix(self, cd_process_model):
+        '''
+        calculates the ratio matrix R that is used to adjust the Q3 weights of the 
+        CD-MPC steady state performance prediction QP problem such that the results 
+        matches the result of the dynamic CD-MPC controller in steady state.
+
+        Q3_ss^-1 = R.*Q3^-1, where .* denotes element wise multiplication (Matlab syntax)
+
+        See chapter 6 in Junquang Fan's PhD thesis for details.
+
+        Calling syntax: R=calc_ratio_matrix(cd_process_model)
+
+        Inputs:
+		    cd_process_model -  A CDProcessModel object     
+
+        Outputs:
+		    R -                 The Q3 ratio matrix
+        '''
+        Ny = cd_process_model.Ny
+        Nu = cd_process_model.Nu
+        Td = cd_process_model.time_delay
+        Hp = self.Hp
+        A = cd_process_model.A
+        B = cd_process_model.B
+        
+        R = np.zeros((Ny, Nu))
+
+        for i in range(Ny):
+            for j in range(Nu):
+                if np.mean(np.diag(B[i][j])) != 0:
+                    # There is a non zero gain between actuator beam j and measurement array i,
+                    # hence we need to update R from its initial values of zero
+                    a = np.mean(np.diag(A[i][j]))
+                    a_sum = 0
+                    for m in range(1,Hp-Td[i][j]+1):
+                        for n in range(1, m+1):
+                            a_sum += a**(n-1)
+                    R[i][j] = (1-a)*a_sum   
+        return R
