@@ -21,11 +21,13 @@ class CDMPC:
     cd_process_model -      A cd_process_model object
 
     Class Attributes:
-    G_f -                   The full (concatinated) G matrix for the mimo CD process
-    Y_1                     The concatenated array of initial measurement profiles, i.e. Y(k-1)
-    U_1                     The concatenated array of initial actuator profiles, i.e. U(k-1)
-    Y_d                     The concatenated distrubance array Y_d
-    Q1 -                    The final full (concatinated) Q1 matrix used in the QP optimization
+    G_f -                   Full (concatinated) G matrix for the mimo CD process
+    Y_1                     Concatenated array of initial measurement profiles, i.e. Y(k-1)
+    U_1                     Concatenated array of initial actuator profiles, i.e. U(k-1)
+    Y_d                     Cconcatenated distrubance array Y_d
+    Q1 -                    Ffinal full (concatinated) Q1 matrix used in the QP optimization
+    R -                     Ratio matrix relating Q3 of the steady state preformance prediction problem and the dynamic CD-MPC controller
+    R_row_sum               The row sum of the ration matrix R
    
     Class Methods:
     build_G_full -          Builds the G_f matrix
@@ -60,6 +62,7 @@ class CDMPC:
 
         # Calculate Q3
         self.R = self.calc_ratio_matrix(cd_process_model)
+        self.R_row_sum = self.calc_ratio_matrix_row_sum()
 
     # END Constructor
 
@@ -179,8 +182,7 @@ class CDMPC:
         Q1_array = np.array(Q1_list)
         Q1 = np.diag(Q1_array)
         return Q1
-    
-    
+      
     def calc_ratio_matrix(self, cd_process_model):
         '''
         calculates the ratio matrix R that is used to adjust the Q3 weights of the 
@@ -220,3 +222,66 @@ class CDMPC:
                             a_sum += a**(n-1)
                     R[i][j] = (1-a)*a_sum   
         return R
+    
+    def calc_ratio_matrix_row_sum(self):
+        '''
+        Calculates the row sum of the ratio matrix R.
+
+        Calling syntax: R_row_sum = calc_ratio_matrix_row_sum()
+
+        Inputs:
+		    None    
+
+        Outputs:
+		    R_row_sum -         The row sum of the ratio matrix
+        '''
+        R = self.R
+        R_row_sum = np.sum(R, axis = 0)
+
+        # R_row_sum is part of the denominator in the Q3 normalization, so it cannot be zero.
+        # A R_row_sum element of zero indicates that a CD actuator beam has no impact on any CD measurement
+        # array, so this should never happen but the matlab code has this protection ....
+        for j in range(len(R_row_sum)):
+            if R_row_sum[j] == 0:
+                R_row_sum = 1e-8
+
+        return R_row_sum
+
+    def update_q3_norm(self, cd_actuators, cd_measurements):
+        '''
+        Updates the q3 normalization divisor in the CDActuator objects. This is done from the 
+        CDMPC class since the update requires the ratio matrix R.
+
+        Calling syntax:         update_q3_norm(cd_actuators)
+
+        Input parameters:
+        cd_actuators -          A list of CDActuator objects
+
+        Output parameters:
+        None
+        '''
+        Nu = len(cd_actuators)
+        Ny = len(cd_measurements)
+        for j in range(Nu):
+            cd_actuators[j].calc_q3_norm(self.R_row_sum[j], Ny)
+
+    def update_q3(cd_actuators):
+        '''
+        updates the q3 weight for each CDActuator object in the cd_actuators list of CDActuator objects 
+        '''
+        Nu = len(cd_actuators)
+        for j in range(Nu):
+            cd_actuators[j].calc_q3()
+        
+
+    def calc_Q3(self, cd_actuators):
+        '''
+        Calculates the Q3 weighting matrix for the cd perforamance prediction
+        QP problem. Q3 penalizes deviations from nominal (ideal) CD actuator setpoints.
+        We also refer this to an energy penalty since the ideal CD actuator setpoints are
+        often the ones that minimize enery usage.
+        '''
+        
+        Nu = len(cd_actuators)
+        for j in range(Nu):
+
