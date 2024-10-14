@@ -586,3 +586,50 @@ def test_case_15():
     
     R = cd_performance_prediction.cd_mpc.R
     print('R =', R)
+
+def test_case_16():
+    '''
+    Tests the calcualtion/building of the Q3 matrix
+    '''
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Load the Matlab generated Q3 matrix
+    data_file = 'Q3.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        Q3_matlab = json.load(f)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+ 
+    Q3 = cd_performance_prediction.cd_mpc.Q3
+    Q3_matlab = np.array(Q3_matlab)
+    Q3_diff = Q3_matlab - Q3
+
+    print('shape of Q1 =', np.shape(Q3))
+
+    for cd_actuator in cd_performance_prediction.cd_actuators:
+        print('Energy penalty for ' + cd_actuator.name + ' is ', cd_actuator.energy_penalty) 
+        print('Max range for ' + cd_actuator.name + ' is ', cd_actuator.max_range) 
+        print('q3 normalization for ' + cd_actuator.name + ' is ', cd_actuator.q3_norm)
+        print('q3 for ' + cd_actuator.name + ' is ', cd_actuator.q3)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q3))
+    title_str = 'Q3_diag' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q3_matlab))
+    title_str = 'Q3_diag from Matlab' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q3_diff))
+    title_str = 'Q3_diff' 
+    plt.title(title_str)
+
+    plt.show()
+

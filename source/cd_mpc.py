@@ -63,6 +63,10 @@ class CDMPC:
         # Calculate Q3
         self.R = self.calc_ratio_matrix(cd_process_model)
         self.R_row_sum = self.calc_ratio_matrix_row_sum()
+        self.update_q3_norm(cd_actuators)                       # Updates the CDActuator objects
+        self.update_q3_scaling(cd_actuators, cd_measurements)   # Updates the CDActuator objects       
+        self.update_q3(cd_actuators)                            # Updates the CDActuator objects
+        self.Q3 = self.calc_Q3(cd_actuators)
 
     # END Constructor
 
@@ -247,7 +251,7 @@ class CDMPC:
 
         return R_row_sum
 
-    def update_q3_norm(self, cd_actuators, cd_measurements):
+    def update_q3_norm(self, cd_actuators):
         '''
         Updates the q3 normalization divisor in the CDActuator objects. This is done from the 
         CDMPC class since the update requires the ratio matrix R.
@@ -260,18 +264,27 @@ class CDMPC:
         Output parameters:
         None
         '''
-        Nu = len(cd_actuators)
-        Ny = len(cd_measurements)
-        for j in range(Nu):
-            cd_actuators[j].calc_q3_norm(self.R_row_sum[j], Ny)
+        for cd_actuator in cd_actuators:
+            cd_actuator.calc_q3_norm()
 
-    def update_q3(cd_actuators):
+    def update_q3_scaling(self, cd_actuators, cd_measurments):
+        '''
+        updates the q3 scaling for each CDActuator object in the cd_actuators list of CDActuator objects
+        '''
+        Ny = len(cd_measurments)
+        Nu = len(cd_actuators)
+        R_row_sum = self.R_row_sum
+        for j in range(Nu):
+            cd_actuators[j].calc_q3_scaling(R_row_sum[j], Ny)
+
+
+
+    def update_q3(self, cd_actuators):
         '''
         updates the q3 weight for each CDActuator object in the cd_actuators list of CDActuator objects 
         '''
-        Nu = len(cd_actuators)
-        for j in range(Nu):
-            cd_actuators[j].calc_q3()
+        for cd_actuator in cd_actuators:
+            cd_actuator.calc_q3()
         
 
     def calc_Q3(self, cd_actuators):
@@ -281,7 +294,10 @@ class CDMPC:
         We also refer this to an energy penalty since the ideal CD actuator setpoints are
         often the ones that minimize enery usage.
         '''
-        
-        Nu = len(cd_actuators)
-        for j in range(Nu):
+        Q3_list = []
+        for cd_actuator in cd_actuators:
+            Q3_list += [cd_actuator.q3]*cd_actuator.resolution
+        Q3_array = np.array(Q3_list)
+        Q3 = np.diag(Q3_array)
+        return Q3
 
