@@ -633,3 +633,78 @@ def test_case_16():
 
     plt.show()
 
+def test_case_17():
+    '''
+    Tests the calcualtion/building of the Q4 matrix
+    '''
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Load the Matlab generated Q3 matrix
+    data_file = 'Q4.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        Q4_matlab = json.load(f)
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    Q4 = cd_performance_prediction.cd_mpc.Q4
+    Q4_matlab = np.array(Q4_matlab)
+    Q4_diff = Q4_matlab - Q4
+
+    print('shape of Q4 =', np.shape(Q4))
+
+    for cd_actuator in cd_performance_prediction.cd_actuators:
+        print('Picketing penalty for ' + cd_actuator.name + ' is ', cd_actuator.picketing_penalty) 
+        print('Bending matrix, upper corner for ' + cd_actuator.name + ' is ', cd_actuator.bending_matrix[0:5,0:5]) 
+        print('q4 normalization for ' + cd_actuator.name + ' is ', cd_actuator.q4_norm)
+        print('q4 for ' + cd_actuator.name + ' is ', cd_actuator.q4)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4))
+    title_str = 'Q4_diag' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_matlab))
+    title_str = 'Q4_diag from Matlab' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_diff))
+    title_str = 'Q4_diff' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4, -1))
+    title_str = 'Q4 lower off-diag' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_matlab, -1))
+    title_str = 'Q4 lower off-diag from Matlab' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_diff, -1))
+    title_str = 'Q4 lower off-diag diff' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4, 1))
+    title_str = 'Q4 upper off-diag' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_matlab, 1))
+    title_str = 'Q4 upper off-diag from Matlab' 
+    plt.title(title_str)
+
+    [fig, ax] = plt.subplots()
+    ax.plot(np.diag(Q4_diff, 1))
+    title_str = 'Q4 upper off-diag diff' 
+    plt.title(title_str)
+
+    plt.show()
+

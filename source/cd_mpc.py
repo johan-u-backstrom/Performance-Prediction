@@ -5,6 +5,7 @@ which holds all the CD-MPC attributes and methods.
 Copyright: Honeywell Process Solutions - North Vancouver
 '''
 import numpy as np
+from scipy.linalg import block_diag
 
 class CDMPC:
     '''
@@ -15,19 +16,20 @@ class CDMPC:
 
     Input Parameters:
     cd_mpc_tuning -         A cd_mpc_tuning Dictinoary provided by the external caller to the the RESTFul API
-    cd_system -             A cd_system object
-    cd_actuators -          A List of cd_actuator objects
-    cd_measurements -       A List of cd_measurement objects
-    cd_process_model -      A cd_process_model object
+    cd_system -             A cd_system object instantiated from the CDSystem class
+    cd_actuators -          A List of cd_actuator objects instantiated from the CDActuator class
+    cd_measurements -       A List of cd_measurement objects instantiated from the CDMeasurement class
+    cd_process_model -      A cd_process_model object instantiated from the CDProcessModel class
 
     Class Attributes:
     G_f -                   Full (concatinated) G matrix for the mimo CD process
     Y_1                     Concatenated array of initial measurement profiles, i.e. Y(k-1)
     U_1                     Concatenated array of initial actuator profiles, i.e. U(k-1)
     Y_d                     Cconcatenated distrubance array Y_d
-    Q1 -                    Ffinal full (concatinated) Q1 matrix used in the QP optimization
+    Q1 -                    Final full (concatinated) Q1 matrix used in the CD-MPC objective function
     R -                     Ratio matrix relating Q3 of the steady state preformance prediction problem and the dynamic CD-MPC controller
     R_row_sum               The row sum of the ration matrix R
+    Q3 -                    Final full (concatinated) Q3 matrix used in the CD-MPC objective function
    
     Class Methods:
     build_G_full -          Builds the G_f matrix
@@ -38,6 +40,13 @@ class CDMPC:
     update_max_exp_e        Updates the max_expected_error in the CDMeasurement objects
     update_q1_norm          Updates the q1 normalization divisor in the CDMeasurement objects
     update_q1               Updates the q1 measurement weight in the CDMeasurement objects
+    calc_Q1                 Calculates the Q1 (measurement) weighting matrix
+    calc_ratio_matrix       Calculates the ratio matrix R
+    calc_R_row_sum          Calculates the row sum of R
+    update_q3_norm          Updates the q3 normalization divisor in the CDActuator object
+    update_q3_scaling       Updates the q3 scaling divisor in the CDActuator object
+    update_q3               Updates the q3 weight (energy weight) in the CDActuator object
+    calc_Q3                 Calculates the Q3 (energy) weighting matrix
 
     '''
 
@@ -63,11 +72,13 @@ class CDMPC:
         # Calculate Q3
         self.R = self.calc_ratio_matrix(cd_process_model)
         self.R_row_sum = self.calc_ratio_matrix_row_sum()
-        self.update_q3_norm(cd_actuators)                       # Updates the CDActuator objects
-        self.update_q3_scaling(cd_actuators, cd_measurements)   # Updates the CDActuator objects       
+        self.update_q_scaling(cd_actuators, cd_measurements)    # Updates the CDActuator objects       
         self.update_q3(cd_actuators)                            # Updates the CDActuator objects
         self.Q3 = self.calc_Q3(cd_actuators)
 
+        # Calculate Q4
+        self.update_q4(cd_actuators)                                        # Updates the CDActuator objects
+        self.Q4 = self.calc_Q4(cd_actuators)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -251,45 +262,26 @@ class CDMPC:
 
         return R_row_sum
 
-    def update_q3_norm(self, cd_actuators):
+    def update_q_scaling(self, cd_actuators, cd_measurments):
         '''
-        Updates the q3 normalization divisor in the CDActuator objects. This is done from the 
-        CDMPC class since the update requires the ratio matrix R.
-
-        Calling syntax:         update_q3_norm(cd_actuators)
-
-        Input parameters:
-        cd_actuators -          A list of CDActuator objects
-
-        Output parameters:
-        None
-        '''
-        for cd_actuator in cd_actuators:
-            cd_actuator.calc_q3_norm()
-
-    def update_q3_scaling(self, cd_actuators, cd_measurments):
-        '''
-        updates the q3 scaling for each CDActuator object in the cd_actuators list of CDActuator objects
+        updates the q scaling for each CDActuator object in the cd_actuators list of CDActuator objects
         '''
         Ny = len(cd_measurments)
         Nu = len(cd_actuators)
         R_row_sum = self.R_row_sum
         for j in range(Nu):
-            cd_actuators[j].calc_q3_scaling(R_row_sum[j], Ny)
-
-
-
+            cd_actuators[j].update_q_scaling(R_row_sum[j], Ny)
+    
     def update_q3(self, cd_actuators):
         '''
         updates the q3 weight for each CDActuator object in the cd_actuators list of CDActuator objects 
         '''
         for cd_actuator in cd_actuators:
-            cd_actuator.calc_q3()
+            cd_actuator.update_q3()
         
-
     def calc_Q3(self, cd_actuators):
         '''
-        Calculates the Q3 weighting matrix for the cd perforamance prediction
+        Calculates the Q3 weighting matrix for the cd performance prediction
         QP problem. Q3 penalizes deviations from nominal (ideal) CD actuator setpoints.
         We also refer this to an energy penalty since the ideal CD actuator setpoints are
         often the ones that minimize enery usage.
@@ -300,4 +292,30 @@ class CDMPC:
         Q3_array = np.array(Q3_list)
         Q3 = np.diag(Q3_array)
         return Q3
+    
+    def update_q4(self, cd_actuators):
+        '''
+        updates the q4 weight for each CDActuator object in the cd_actuators list of CDActuator objects 
+        '''
+        for cd_actuator in cd_actuators:
+            cd_actuator.update_q4()
 
+    def calc_Q4(self, cd_actuators):
+        '''
+        Calculates the Q4 weighting matrix for the cd performance prediction
+        QP problem. Q4 penalizes cd actuator picketing (every other actuator up every other actuator down)
+        or bending of the cd actuator beam. It penalizing the 2nd order differnece of the cd actuator array.
+        '''
+        Q4_list = []
+        for cd_actuator in cd_actuators:
+            # First, we create a list of the picketing penalty matrices, one for each cd actuator beam
+            q4_matrix = np.diag(cd_actuator.q4*np.ones(cd_actuator.resolution))
+            bending_matrix = cd_actuator.bending_matrix
+            Q4_list.append(np.transpose(bending_matrix)@q4_matrix@bending_matrix)
+        print('Q4_list =', Q4_list)
+        print('Shape of Q4_list = ', np.shape(Q4_list))
+        # Second, we build the block diagonal Q4 matrix
+        Q4 = block_diag(*Q4_list)
+    
+        return Q4
+        
