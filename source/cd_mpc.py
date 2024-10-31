@@ -31,7 +31,8 @@ class CDMPC:
     R_row_sum               The row sum of the ration matrix R
     Q3 -                    Final full (concatinated) Q3 matrix used in the CD-MPC objective function
     Q4 -                    Final full (concatinated) Q4 matrix used in the CD-MPC objective function
-    PHI -                   Hessina matrix in the QP problem formulation
+    PHI -                   Hessian matrix in the QP problem formulation
+    phi -                   The phi vector un the QP problem formulation
    
     Class Methods:
     build_G_full -          Builds the G_f matrix
@@ -52,6 +53,7 @@ class CDMPC:
     update_q4               Updates the q4 weight (picketing penalty weight) in the CDActuator object
     calc_Q4                 Calculates the Q4 (picketing penalty) weighting matrix
     calc_PHI                Calculates the Hessian matrix for the QP problem
+    calc_phi                Calculates the phi vector in the QP problem
     '''
     
     def __init__(self, cd_mpc_tuning, cd_system, cd_actuators, cd_measurements, cd_process_model):
@@ -82,6 +84,7 @@ class CDMPC:
         self.Q4 = self.calc_Q4(cd_actuators)
 
         self.PHI = self.calc_PHI(cd_actuators)
+        self.phi = self.calc_phi(cd_measurements, cd_actuators)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -328,8 +331,7 @@ class CDMPC:
 
         min f(x) = x'*PHI*x + phi'*x
 
-        Calling Syntax: 
-        PHI = calc_phi()
+        Calling Syntax: PHI = calc_PHI()
 
         Inputs:
         None
@@ -347,8 +349,52 @@ class CDMPC:
         Q4 = self.Q4
 
         PHI = np.transpose(G_f)@Q1@G_f + Q3 + Q4
-
         # Ensure symetric positive (semi) definite matrix (remove any numeric small variation from perfect symetry)
         PHI = (PHI + np.transpose(PHI))/2
-
         return PHI
+    
+    def calc_phi(self, cd_measurements, cd_actuators):
+        '''
+        Calculates the phi array for the CD Performance Prediction QP problem:
+
+        min f(x) = x'*PHI*x + phi'*x
+
+        Calling Syntax: PHI = calc_phi()
+
+        Inputs:
+        None
+
+        Outputs:
+        phi -       the phi array in the QP problem
+        '''
+        N = 0
+        for cd_actuator in cd_actuators:
+            N += cd_actuator.resolution 
+        phi = np.zeros(N)
+        G_f = self.G_f
+        Q1 = self.Q1
+        Q3 = self.Q3
+        Q4 = self.Q4
+
+        # Concatenated array of initial actuator setpoint arrays u(k-1) and actuator setpoint target arrays u_tgt(k)
+        U_1 = []
+        U_tgt = []
+        for cd_actuator in cd_actuators:
+            U_1 += cd_actuator.initial_profile
+            U_tgt += cd_actuator.desired_setpoints
+        U_1 = np.array(U_1)
+        U_tgt = np.array(U_tgt)
+        U_e = U_tgt - U_1
+
+        # Concatenated array of error profiles e(k)
+        E = []
+        for cd_measurement in cd_measurements:
+            E += cd_measurement.error_profile.tolist()
+        E = np.array(E)
+
+        # Note the negative sign for E and U_e. This is to match the CD-MPC design document and 
+        # the matlab implementation. The sign for these do not matter since they are both squared in
+        # the QP objective function.
+        phi = -E@Q1@G_f - U_e@Q3 + U_1@Q4  
+
+        return phi

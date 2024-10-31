@@ -60,9 +60,12 @@ class CDActuator:
         self.min_setpoint = cd_actuator_dict.get('min')
         self.max_setpoint = cd_actuator_dict.get('max')
         self.desired_setpoints = cd_actuator_dict.get('desiredActSetpoints')
+        self.update_desired_setpoints()
         self.bend_limit_first_order = cd_actuator_dict.get('bendLimitFirstOrder')
         self.bend_limit_second_order = cd_actuator_dict.get('bendLimitSecondOrder')
         self.bend_limit_enabled = cd_actuator_dict.get('bendLimitEnabled')
+        
+
         self.max_range = self.calc_max_range()
         self.q3_norm = self.calc_q3_norm(self.max_range)
         self.q_scaling = 1.0
@@ -76,14 +79,26 @@ class CDActuator:
         print('CD actuator resolution =', self.resolution)
 
         # END Constructor
+
+    def update_desired_setpoints(self):
+        '''
+        updates the desired setpoints from the caller to ensure
+        this is list of length = cd actuator resolution
+        '''
+        if type(self.desired_setpoints) == int or type(self.desired_setpoints) == float:
+            self.desired_setpoints = [self.desired_setpoints]*self.resolution
+
     def calc_max_range(self):
         '''
         calculates the maximum expected range for a cd actuator in the cd actuator beam
 
         Calling Syntax: max_range = calc_max_range()
         '''
-        max_range_down = np.max(np.abs(self.desired_setpoints - self.min_setpoint))
-        max_range_up = np.max(np.abs(self.max_setpoint - self.desired_setpoints))
+        desired_setpoints = np.array(self.desired_setpoints)
+        min_setpoint = self.min_setpoint
+        max_setpoint = self.max_setpoint
+        max_range_down = np.max(np.abs(desired_setpoints - min_setpoint))
+        max_range_up = np.max(np.abs(max_setpoint - desired_setpoints))
         max_range = np.max([max_range_down, max_range_up])
         return max_range
     

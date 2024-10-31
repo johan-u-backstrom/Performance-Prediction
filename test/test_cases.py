@@ -756,4 +756,30 @@ def test_case_18():
 
     plt.show()
 
+def test_case_19():
+    '''
+    Test the calculation of the QP matrix phi
+    '''
+     # load the PHI from the Matlab data file
+    data_file = 'QPMatrices.mat'
+    data_file_path = data_dir + '/' + data_file
+    matlab_data = sio.loadmat(data_file_path, squeeze_me = True)
+    print('matlab data variables: ', matlab_data.keys())
+    phi_matlab = matlab_data['sphi_sta']
+
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    phi = cd_performance_prediction.cd_mpc.phi
+
+    phi_diff = phi_matlab - phi
+
+    phi_diff_sum = np.sum(phi_diff)
+
+    print('sum of differences in phi =', phi_diff_sum)
+    
+
     
