@@ -30,6 +30,8 @@ class CDMPC:
     R -                     Ratio matrix relating Q3 of the steady state preformance prediction problem and the dynamic CD-MPC controller
     R_row_sum               The row sum of the ration matrix R
     Q3 -                    Final full (concatinated) Q3 matrix used in the CD-MPC objective function
+    Q4 -                    Final full (concatinated) Q4 matrix used in the CD-MPC objective function
+    PHI -                   Hessina matrix in the QP problem formulation
    
     Class Methods:
     build_G_full -          Builds the G_f matrix
@@ -47,9 +49,11 @@ class CDMPC:
     update_q3_scaling       Updates the q3 scaling divisor in the CDActuator object
     update_q3               Updates the q3 weight (energy weight) in the CDActuator object
     calc_Q3                 Calculates the Q3 (energy) weighting matrix
-
+    update_q4               Updates the q4 weight (picketing penalty weight) in the CDActuator object
+    calc_Q4                 Calculates the Q4 (picketing penalty) weighting matrix
+    calc_PHI                Calculates the Hessian matrix for the QP problem
     '''
-
+    
     def __init__(self, cd_mpc_tuning, cd_system, cd_actuators, cd_measurements, cd_process_model):
         '''
         The Class Constructor
@@ -62,23 +66,22 @@ class CDMPC:
         self.U_1 =  self.build_U_1(cd_actuators)
         self.Y_d = self.calc_Y_d(self.Y_1, self.U_1, self.G_f)
         
-        # Calculate Q1 
         self.update_y_d(self.Y_d, cd_measurements)  # Updates the CDMeasurement objects 
         self.update_max_exp_e(cd_measurements)      # Updates the CDMeasurement objects 
         self.update_q1_norm(cd_measurements)        # Updates the CDMeasurement objects
         self.update_q1(cd_measurements)             # Updates the CDMeasurement objects
         self.Q1 = self.calc_Q1(cd_measurements)
 
-        # Calculate Q3
         self.R = self.calc_ratio_matrix(cd_process_model)
         self.R_row_sum = self.calc_ratio_matrix_row_sum()
         self.update_q_scaling(cd_actuators, cd_measurements)    # Updates the CDActuator objects       
         self.update_q3(cd_actuators)                            # Updates the CDActuator objects
         self.Q3 = self.calc_Q3(cd_actuators)
 
-        # Calculate Q4
-        self.update_q4(cd_actuators)                                        # Updates the CDActuator objects
+        self.update_q4(cd_actuators)                             # Updates the CDActuator objects
         self.Q4 = self.calc_Q4(cd_actuators)
+
+        self.PHI = self.calc_PHI(cd_actuators)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -311,11 +314,41 @@ class CDMPC:
             # First, we create a list of the picketing penalty matrices, one for each cd actuator beam
             q4_matrix = np.diag(cd_actuator.q4*np.ones(cd_actuator.resolution))
             bending_matrix = cd_actuator.bending_matrix
-            Q4_list.append(np.transpose(bending_matrix)@q4_matrix@bending_matrix)
-        print('Q4_list =', Q4_list)
-        print('Shape of Q4_list = ', np.shape(Q4_list))
+            picketing_penalty_matrix = np.transpose(bending_matrix)@q4_matrix@bending_matrix
+            Q4_list.append(picketing_penalty_matrix)
+     
         # Second, we build the block diagonal Q4 matrix
         Q4 = block_diag(*Q4_list)
-    
         return Q4
         
+    def calc_PHI(self,cd_actuators):
+        '''
+        Calculates the PHI matrix in the QP problem for the CD PErformance Prediction problem. 
+        The PHI matrix is the Hessian of the QP problem:
+
+        min f(x) = x'*PHI*x + phi'*x
+
+        Calling Syntax: 
+        PHI = calc_phi()
+
+        Inputs:
+        None
+
+        Outputs:
+        PHI -       the Hessinan 
+        '''
+        N = 0
+        for cd_actuator in cd_actuators:
+            N += cd_actuator.resolution 
+        PHI = np.zeros((N,N))
+        G_f = self.G_f
+        Q1 = self.Q1
+        Q3 = self.Q3
+        Q4 = self.Q4
+
+        PHI = np.transpose(G_f)@Q1@G_f + Q3 + Q4
+
+        # Ensure symetric positive (semi) definite matrix (remove any numeric small variation from perfect symetry)
+        PHI = (PHI + np.transpose(PHI))/2
+
+        return PHI

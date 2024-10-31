@@ -708,3 +708,52 @@ def test_case_17():
 
     plt.show()
 
+def test_case_18():
+    '''
+    Tests the building of the PHI matrix (Hessinan)
+    '''
+    # load the PHI from the Matlab data file
+    data_file = 'QPMatrices.mat'
+    data_file_path = data_dir + '/' + data_file
+    matlab_data = sio.loadmat(data_file_path, squeeze_me = True)
+    print('matlab data variables: ', matlab_data.keys())
+    PHI_matlab = matlab_data['sPHI_sta']
+
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    PHI = cd_performance_prediction.cd_mpc.PHI
+
+    PHI_diff = PHI_matlab - PHI
+
+    PHI_diff_sum = np.sum(PHI_diff)
+
+    print('sum of differences in PHI =', PHI_diff_sum)
+    
+    (rows, cols) = np.shape(PHI)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, PHI, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('PHI')
+
+    (rows, cols) = np.shape(PHI_matlab)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, PHI_matlab, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('PHI_matlab')
+
+    (rows, cols) = np.shape(PHI_diff)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, PHI_diff, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('PHI_diff')
+
+    plt.show()
+
+    
