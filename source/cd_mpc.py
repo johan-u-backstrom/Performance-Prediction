@@ -384,7 +384,7 @@ class CDMPC:
             U_tgt += cd_actuator.desired_setpoints
         U_1 = np.array(U_1)
         U_tgt = np.array(U_tgt)
-        U_e = U_tgt - U_1
+        U_e = U_1 - U_tgt
 
         # Concatenated array of error profiles e(k)
         E = []
@@ -392,9 +392,6 @@ class CDMPC:
             E += cd_measurement.error_profile.tolist()
         E = np.array(E)
 
-        # Note the negative sign for E and U_e. This is to match the CD-MPC design document and 
-        # the matlab implementation. The sign for these do not matter since they are both squared in
-        # the QP objective function.
-        phi = -E@Q1@G_f - U_e@Q3 + U_1@Q4  
+        phi = E@Q1@G_f + U_e@Q3 + U_1@Q4  
 
         return phi

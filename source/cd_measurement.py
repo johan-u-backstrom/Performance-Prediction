@@ -124,11 +124,11 @@ class CDMeasurement:
         control_mode = self.control_mode
 
         if control_mode == 'cd_only':
-            error_profile = target_profile - (init_meas_profile - np.mean(init_meas_profile))
+            error_profile = (init_meas_profile - np.mean(init_meas_profile)) - target_profile 
         elif control_mode == 'md_only':
-            error_profile = target_profile - np.mean(init_meas_profile)*np.ones(N)
+            error_profile = np.mean(init_meas_profile)*np.ones(N) - target_profile
         elif control_mode == 'cd_and_md':
-            error_profile = target_profile -  init_meas_profile
+            error_profile = init_meas_profile - target_profile
 
         return error_profile
 

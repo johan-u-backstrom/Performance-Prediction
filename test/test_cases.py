@@ -781,5 +781,13 @@ def test_case_19():
 
     print('sum of differences in phi =', phi_diff_sum)
     
+    [fig, ax] = plt.subplots()
+    x = range(0,len(phi))
+    ax.plot(x, phi, 'b-', label = 'phi')
+    ax.plot( x, phi_matlab, 'r--', label = 'phi from matlab')
+    ax.legend()
+    ax.set_title( 'phi vs phi from matlab')
+
+    plt.show()
 
     
