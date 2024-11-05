@@ -395,3 +395,90 @@ class CDMPC:
         phi = E@Q1@G_f + U_e@Q3 + U_1@Q4  
 
         return phi
+    
+    def calc_constraint_matrices(self, cd_actuators):
+        '''
+        Calculates the contraint matrices Ac, Bc, and Cc in:
+
+            Ac@dU(k) <= Bc - Cc@U(k-1) 
+
+        For details, see section 8.7 and 9.5 in
+        Performance CDMultivariable 2.0 Algorithm Design Specification.  
+        In the design document, greek letters are used for the notation: 
+        Ac is Omegan, Bc is cursive B, and Cc is cursive C. 
+
+        Constraints are relaxed for cd actuators that either 
+        has the constraint disabled or that are NOT available for control. The 
+        latter part is counter intuitive but per design to speed up the QP solution
+        by relaxing as many constraints as possible. Actuators NOT available for control
+        has delta_u_max = 0 as the only active constaint. 
+
+
+        Calling syntax:
+
+        Inputs:
+        cd_actuators -      A list of cd_actuator objects
+
+        Outputs:
+        Ac -
+        '''
+        Ac = []
+        Cc = []
+        for cd_actuator in cd_actuators:
+            nu = cd_actuator.resolution
+            u_max = cd_actuator.max_setpoint
+            if not(cd_actuator.max_enabled):
+                # Relax the constraint
+                u_max = 1e6
+            u_min = cd_actuator.min_sertpoint
+            if not(cd_actuator.min_enabled):
+               # Relax the constraint
+               u_min = -1e6
+
+            # Note: All Bi arrays below should be column vectors but numpy does not differentiate between a
+            # 1D array and its transpose and should therefore automatically 
+            # convert it to a column vector when needed, e.g. in the QP solver. 
+            
+            # Bend limit constraint
+            BM = cd_actuator.bending_matrix
+            bl_first = cd_actuator.bend_limit_first_order
+            bl_second = cd_actuator.bend_limit_second_order
+            A1 = np.vstack((BM,-BM))
+            C1 = A1
+            bend_limits = np.array([bl_first, bl_second*np.ones(nu-2), bl_first])
+            # Relax constraints
+            active_constraints = cd_actuator.control_enable*cd_actuator.bend_limit_enable 
+            relaxed_constraints = np.logical_not(active_constraints).astype(int)
+            relaxed_constraint_limits = 10*(u_max-u_min)*relaxed_constraints
+            bend_limits += relaxed_constraint_limits
+            B1 = np.hstack((bend_limits, bend_limits)) 
+            
+            # Maintain average constraint
+            avg_min = cd_actuator.avg_min_setpoint
+            avg_max = cd_actuator.avg_max_setpoint
+            active_constraints = cd_actuator.avg_enabled
+            sum_active = sum(active_constraints)
+            if sum_active == 0.0:
+                # There are no active constraints -> Relax the constraint
+                A2_block = np.ones(nu)/nu     # use all actuators in avg in case the constraint is relaxed (not in use)
+                B2 = np.array([u_max, -u_min])
+            else:
+                A2_block = active_constraints/sum_active
+                B2 = np.array([avg_max, -avg_min])
+            A2 = np.vstack((A2_block, -A2_block))
+            C2 = A2
+            # Note: Since there is no max delta u constraint for the steady state CD performance prediction, 
+            # we are leaving out the implementation of the constraint relaxation code for the case
+            # that the distance between the average to mainain (constraint) and the actual average is greater than
+            # the maximum delta u constaint, which results in a constraint conflict.   
+
+            # Min and Max constraints
+            I = np.eye(nu) 
+            A34 = np.vstack((I, -I)) 
+            C34 = A34
+            B34 = np.array([u_max, -u_min])
+
+            # Stack the A and C matrices and the B vector
+            A_stack = np.vstack((A1, A2, A34))
+            C_stack = np.vstack((C1, C2, C34))
+            B_stack = np.hstack((B1, B2, B34))
