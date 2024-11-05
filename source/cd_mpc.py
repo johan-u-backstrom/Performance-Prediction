@@ -396,9 +396,9 @@ class CDMPC:
 
         return phi
     
-    def calc_constraint_matrices(self, cd_actuators):
+    def build_constraint_matrices(self, cd_actuators):
         '''
-        Calculates the contraint matrices Ac, Bc, and Cc in:
+        Builds the contraint matrices Ac, Bc, and Cc in:
 
             Ac@dU(k) <= Bc - Cc@U(k-1) 
 
@@ -414,16 +414,24 @@ class CDMPC:
         has delta_u_max = 0 as the only active constaint. 
 
 
-        Calling syntax:
+        Calling syntax: [Ac, Bc, Cc] = build_constraint_matrices(cd_actuators)
 
         Inputs:
         cd_actuators -      A list of cd_actuator objects
 
         Outputs:
-        Ac -
+        Ac -                Constraint matrix
+        Bc -                Constraint (column) vector
+        Cc -                Constraint matrix
+
         '''
-        Ac = []
-        Cc = []
+        Ac = None
+        Bc = None
+        Cc = None
+        Ac_list = []
+        Cc_list = []
+        Bc_list = []
+        
         for cd_actuator in cd_actuators:
             nu = cd_actuator.resolution
             u_max = cd_actuator.max_setpoint
@@ -482,3 +490,20 @@ class CDMPC:
             A_stack = np.vstack((A1, A2, A34))
             C_stack = np.vstack((C1, C2, C34))
             B_stack = np.hstack((B1, B2, B34))
+
+            # Note: Since the control horizion Hc is always 1 for the steady state CD Performance Prediction 
+            # problem, we are leaving out the implementation of the code that adds support for Hc > 1
+
+            # Build the lists with one matrix per actuator
+            Ac_list.append(A_stack)
+            Cc_list.append(C_stack)
+            Bc_list.append(B_stack)
+       
+        # Build the Ac and Cc block matrices and Bc block vector from the lists
+        Ac = block_diag(*Ac_list)
+        Cc = np.vstack(*Cc_list) 
+        Bc = np.vstack(*Bc_list)
+
+        return Ac, Bc, Cc
+
+            
