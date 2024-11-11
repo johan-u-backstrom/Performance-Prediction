@@ -85,6 +85,7 @@ class CDMPC:
 
         self.PHI = self.calc_PHI(cd_actuators)
         self.phi = self.calc_phi(cd_measurements, cd_actuators)
+        [self.Ac, self.bc] = self.build_constraint_matrices(cd_actuators)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -405,7 +406,7 @@ class CDMPC:
         For details, see section 8.7 and 9.5 in
         Performance CDMultivariable 2.0 Algorithm Design Specification.  
         In the design document, greek letters are used for the notation: 
-        Ac is Omegan, Bc is cursive B, and Cc is cursive C. 
+        Ac is Omega, Bc is cursive B, and Cc is cursive C. 
 
         Constraints are relaxed for cd actuators that either 
         has the constraint disabled or that are NOT available for control. The 
@@ -422,15 +423,19 @@ class CDMPC:
         Outputs:
         Ac -                Constraint matrix
         Bc -                Constraint (column) vector
+        
+        It also updates this attribute in the CDActuator class
         Cc -                Constraint matrix
 
         '''
         Ac = None
         Bc = None
         Cc = None
+        bc = None
         Ac_list = []
         Cc_list = []
         Bc_list = []
+        bc_list = []
         
         for cd_actuator in cd_actuators:
             nu = cd_actuator.resolution
@@ -438,7 +443,7 @@ class CDMPC:
             if not(cd_actuator.max_enabled):
                 # Relax the constraint
                 u_max = 1e6
-            u_min = cd_actuator.min_sertpoint
+            u_min = cd_actuator.min_setpoint
             if not(cd_actuator.min_enabled):
                # Relax the constraint
                u_min = -1e6
@@ -453,9 +458,9 @@ class CDMPC:
             bl_second = cd_actuator.bend_limit_second_order
             A1 = np.vstack((BM,-BM))
             C1 = A1
-            bend_limits = np.array([bl_first, bl_second*np.ones(nu-2), bl_first])
+            bend_limits = np.array([bl_first, *bl_second*np.ones(nu-2), bl_first])
             # Relax constraints
-            active_constraints = cd_actuator.control_enable*cd_actuator.bend_limit_enable 
+            active_constraints = cd_actuator.control_enabled*cd_actuator.bend_limit_enabled 
             relaxed_constraints = np.logical_not(active_constraints).astype(int)
             relaxed_constraint_limits = 10*(u_max-u_min)*relaxed_constraints
             bend_limits += relaxed_constraint_limits
@@ -465,6 +470,9 @@ class CDMPC:
             avg_min = cd_actuator.avg_min_setpoint
             avg_max = cd_actuator.avg_max_setpoint
             active_constraints = cd_actuator.avg_enabled
+            if type(active_constraints) == int:
+                # In cases the caller provides an int instead of an array, we need to convert to an array
+                active_constraints = active_constraints*np.ones(nu)
             sum_active = sum(active_constraints)
             if sum_active == 0.0:
                 # There are no active constraints -> Relax the constraint
@@ -484,7 +492,7 @@ class CDMPC:
             I = np.eye(nu) 
             A34 = np.vstack((I, -I)) 
             C34 = A34
-            B34 = np.array([u_max, -u_min])
+            B34 = np.hstack((u_max*np.ones(nu), -u_min*np.ones(nu)))
 
             # Stack the A and C matrices and the B vector
             A_stack = np.vstack((A1, A2, A34))
@@ -494,16 +502,24 @@ class CDMPC:
             # Note: Since the control horizion Hc is always 1 for the steady state CD Performance Prediction 
             # problem, we are leaving out the implementation of the code that adds support for Hc > 1
 
+            # Note: Since the performance prediction call is called once we calculate bc(k) here instead of 
+            # calculating bc(k) in an update_contraint_matrix method like is done for the CD-MPC controller, which
+            # is called for each control execution k.
+            u_1 = cd_actuator.initial_profile
+            bc_stack = B_stack - C_stack@u_1
             # Build the lists with one matrix per actuator
             Ac_list.append(A_stack)
-            Cc_list.append(C_stack)
-            Bc_list.append(B_stack)
+            #Cc_list.append(C_stack)
+            #Bc_list.append(B_stack)
+            bc_list.append(bc_stack)
        
         # Build the Ac and Cc block matrices and Bc block vector from the lists
-        Ac = block_diag(*Ac_list)
-        Cc = np.vstack(*Cc_list) 
-        Bc = np.vstack(*Bc_list)
+        Ac = block_diag(*Ac_list) 
+        #Cc = np.vstack(Cc_list) 
+        #Bc = np.hstack(Bc_list)   
+        bc = np.hstack(bc_list)
+      
 
-        return Ac, Bc, Cc
+        return Ac, bc
 
             

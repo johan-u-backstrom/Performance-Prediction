@@ -61,7 +61,7 @@ class CDActuator:
         self.min_setpoint = cd_actuator_dict.get('min')
         self.min_enabled = cd_actuator_dict.get('minEnabled')
         self.max_setpoint = cd_actuator_dict.get('max')
-        self.max_enabled = cd_actuator_dict.get('max_enabled')
+        self.max_enabled = cd_actuator_dict.get('maxEnabled')
         self.avg_min_setpoint = cd_actuator_dict.get('averageMin')
         self.avg_max_setpoint = cd_actuator_dict.get('averageMax')
         self.avg_enabled = cd_actuator_dict.get('averageEnabled')
@@ -71,7 +71,6 @@ class CDActuator:
         self.bend_limit_second_order = cd_actuator_dict.get('bendLimitSecondOrder')
         self.bend_limit_enabled = cd_actuator_dict.get('bendLimitEnabled')
         
-
         self.max_range = self.calc_max_range()
         self.q3_norm = self.calc_q3_norm(self.max_range)
         self.q_scaling = 1.0
@@ -79,6 +78,7 @@ class CDActuator:
         self.bending_matrix = self.calc_bending_matrix()
         self.q4_norm = self.calc_q4_norm()
         self.q4 = 1.0
+        self.Cc = None      # A constraint matrix, updated in the CDMPC class 
 
         print('CDActuator Class Constructor')
         print('CD actuator name:', self.name)

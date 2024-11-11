@@ -25,4 +25,5 @@ from test import test_cases
 #test_cases.test_case_16()
 #test_cases.test_case_17()
 #test_cases.test_case_18()
-test_cases.test_case_19()
+#test_cases.test_case_19()
+test_cases.test_case_20()

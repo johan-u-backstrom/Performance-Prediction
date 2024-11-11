@@ -790,4 +790,66 @@ def test_case_19():
 
     plt.show()
 
+def test_case_20():
+    '''
+    Tests the building of the constraint matrices
+    Ac and bc
+    Ac@dU(k) <= bc(k)
+    where bc(k) = Bc - Cc@U(k-1)
+
+    '''
+    # Load the Matlab generated Ac and bc matrices
+    data_file = 'Ac.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        Ac_matlab = json.load(f)
+    Ac_matlab = np.array(Ac_matlab)
+    
+    data_file = 'bc.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        bc_matlab = json.load(f)
+
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    Ac = cd_performance_prediction.cd_mpc.Ac
+    #Bc = cd_performance_prediction.cd_mpc.Bc
+    #Cc = cd_performance_prediction.cd_mpc.Cc
+    bc = cd_performance_prediction.cd_mpc.bc
+
+    Ac_diff = Ac_matlab - Ac
+
+    (rows, cols) = np.shape(Ac)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, Ac, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('Ac')
+
+    (rows, cols) = np.shape(Ac_matlab)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, Ac_matlab, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('Ac from matlab')
+
+    (rows, cols) = np.shape(Ac_diff)
+    [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
+    [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
+    surf = ax.plot_surface(X, Y, Ac_diff, cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.title('Ac diff')
+
+    [fig, ax] = plt.subplots()
+    x = range(0,len(bc))
+    ax.plot(x, bc, 'b-', label = 'bc')
+    ax.plot(x, bc_matlab, 'r-.', label = 'bc from matlab')
+    ax.legend()
+    ax.set_title( 'bc')
+
+    plt.show()
+
     
