@@ -6,6 +6,7 @@ Copyright: Honeywell Process Solutions - North Vancouver
 '''
 import numpy as np
 from scipy.linalg import block_diag
+from source import QP
 
 class CDMPC:
     '''
@@ -35,25 +36,30 @@ class CDMPC:
     phi -                   The phi vector un the QP problem formulation
    
     Class Methods:
-    build_G_full -          Builds the G_f matrix
-    build_Y_1               Builds the Y(k-1) array
-    build_U_1               Builds the U(k-1) array  
-    calc_Y_d                Calculates the Y_d array   
-    update_y_d              Updates the disturbance_profile in the CDMeasurement objects
-    update_max_exp_e        Updates the max_expected_error in the CDMeasurement objects
-    update_q1_norm          Updates the q1 normalization divisor in the CDMeasurement objects
-    update_q1               Updates the q1 measurement weight in the CDMeasurement objects
-    calc_Q1                 Calculates the Q1 (measurement) weighting matrix
-    calc_ratio_matrix       Calculates the ratio matrix R
-    calc_R_row_sum          Calculates the row sum of R
-    update_q3_norm          Updates the q3 normalization divisor in the CDActuator object
-    update_q3_scaling       Updates the q3 scaling divisor in the CDActuator object
-    update_q3               Updates the q3 weight (energy weight) in the CDActuator object
-    calc_Q3                 Calculates the Q3 (energy) weighting matrix
-    update_q4               Updates the q4 weight (picketing penalty weight) in the CDActuator object
-    calc_Q4                 Calculates the Q4 (picketing penalty) weighting matrix
-    calc_PHI                Calculates the Hessian matrix for the QP problem
-    calc_phi                Calculates the phi vector in the QP problem
+    build_G_full -              Builds the G_f matrix
+    build_Y_1                   Builds the Y(k-1) array
+    build_U_1                   Builds the U(k-1) array  
+    calc_Y_d                    Calculates the Y_d array   
+    update_y_d                  Updates the disturbance_profile in the CDMeasurement objects
+    update_max_exp_e            Updates the max_expected_error in the CDMeasurement objects
+    update_q1_norm              Updates the q1 normalization divisor in the CDMeasurement objects
+    update_q1                   Updates the q1 measurement weight in the CDMeasurement objects
+    calc_Q1                     Calculates the Q1 (measurement) weighting matrix
+    calc_ratio_matrix           Calculates the ratio matrix R
+    calc_R_row_sum              Calculates the row sum of R
+    update_q3_norm              Updates the q3 normalization divisor in the CDActuator object
+    update_q3_scaling           Updates the q3 scaling divisor in the CDActuator object
+    update_q3                   Updates the q3 weight (energy weight) in the CDActuator object
+    calc_Q3                     Calculates the Q3 (energy) weighting matrix
+    update_q4                   Updates the q4 weight (picketing penalty weight) in the CDActuator object
+    calc_Q4                     Calculates the Q4 (picketing penalty) weighting matrix
+    calc_PHI                    Calculates the Hessian matrix for the QP problem
+    calc_phi                    Calculates the phi vector in the QP problem
+    build_constraint_matrices   Builds the constraint matrices Ac and bc(k)
+    calc_dU                     Calculates the concatenated delta u(k) array with all cd actuators beams concatenated
+    update_du                   Updates delta u(k) in the CDActuator objects
+    update_u                    Updates u(k) in the CDActuator objects
+
     '''
     
     def __init__(self, cd_mpc_tuning, cd_system, cd_actuators, cd_measurements, cd_process_model):
@@ -86,6 +92,9 @@ class CDMPC:
         self.PHI = self.calc_PHI(cd_actuators)
         self.phi = self.calc_phi(cd_measurements, cd_actuators)
         [self.Ac, self.bc] = self.build_constraint_matrices(cd_actuators)
+        self.dU = self.calc_dU(self.PHI, self.phi, self.Ac, self.bc)
+        self.update_du(self.dU, cd_actuators)
+        self.update_u(cd_actuators)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -147,7 +156,7 @@ class CDMPC:
         '''
         U_1 = [] 
         for cd_actuator in cd_actuators:
-            U_1 += cd_actuator.initial_profile
+            U_1 += cd_actuator.u_1
         U_1 = np.array(U_1)
         return U_1
 
@@ -381,7 +390,7 @@ class CDMPC:
         U_1 = []
         U_tgt = []
         for cd_actuator in cd_actuators:
-            U_1 += cd_actuator.initial_profile
+            U_1 += cd_actuator.u_1
             U_tgt += cd_actuator.desired_setpoints
         U_1 = np.array(U_1)
         U_tgt = np.array(U_tgt)
@@ -505,7 +514,7 @@ class CDMPC:
             # Note: Since the performance prediction call is called once we calculate bc(k) here instead of 
             # calculating bc(k) in an update_contraint_matrix method like is done for the CD-MPC controller, which
             # is called for each control execution k.
-            u_1 = cd_actuator.initial_profile
+            u_1 = cd_actuator.u_1
             bc_stack = B_stack - C_stack@u_1
             # Build the lists with one matrix per actuator
             Ac_list.append(A_stack)
@@ -522,4 +531,28 @@ class CDMPC:
 
         return Ac, bc
 
-            
+    def calc_dU(self, PHI, phi, Ac, bc):
+        '''
+        Calculates the optimal delta u setpoints by calling the QP solver.
+        '''
+        dU = QP.solve(PHI, phi, Ac, bc)
+        return dU
+    
+    def update_du(self, dU, cd_actuators):
+        '''
+        updates delta u in the CDActuator objects based on the concatinated 
+        optimal dU
+        '''
+        start_index = 0
+        for cd_actuator in cd_actuators:
+            nu = cd_actuator.resolution
+            du = dU[start_index:start_index+nu]
+            cd_actuator.update_du(du)
+            start_index += nu
+    
+    def update_u(self, cd_actuators):
+        '''
+        updates u in the CDActuator objects
+        '''
+        for cd_actuator in cd_actuators:
+            cd_actuator.update_u()

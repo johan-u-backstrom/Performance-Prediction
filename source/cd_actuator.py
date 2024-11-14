@@ -24,14 +24,16 @@ class CDActuator:
     width_array -               array of actuator zone widths, length = resolution
     low_offset -                cd alignment parameter, see Experion MX CD Control User Manual for details
     high_offset -               cd alignment parameter, see Experion MX CD Control User Manual for details 
-    initial_profile -           the initial cd actuator setpoint profile (before steady state CD-MPC prediction)  
+    u_1 -                       u(k-1) or the initial cd actuator setpoint profile (before steady state CD-MPC prediction)  
     energy_penalty -            user provided penalty for deviating from nominal (desired) actuator setpoints 
     min_setpoint -              minimum allowed setpoint (to be updated to an array of length = resolution)                
     max_setpoint -              maximum allowed setpoint (to be updated to an array of length = resolution)  
     desired_setpoints -         the nominal or desired setpoints
     max_range -                 estimated maximum range (stroke) for a cd actuator in the beam
     q3_norm -                   normalization divisor for the the CD-MPC q3 weight
-    q3 -                        the CD-MPC q3 weight that penalizes moves away from the desired setpoints 
+    q3 -                        the CD-MPC q3 weight that penalizes moves away from the desired setpoints
+    du                          delta u(k), typically the optimal delta u calculated by the QP solver
+    u                           u(k), typically the optimal final profile = u_1 + du
 
     Class Methods:
     calc_max_range              calculates maximum expected range
@@ -54,7 +56,7 @@ class CDActuator:
         self.width_array = cd_actuator_dict.get('widthArray')
         self.low_offset = cd_actuator_dict.get('lowOffset')
         self.high_offset = cd_actuator_dict.get('highOffset')
-        self.initial_profile = cd_actuator_dict.get('initialProfile')
+        self.u_1 = cd_actuator_dict.get('initialProfile')
         self.control_enabled = cd_actuator_dict.get('controlEnable') # 1 maps to CASCADE and 0 maps to AUTO/MANUAL control modes in Experion MX CD Control
         self.energy_penalty = cd_actuator_dict.get('energyPenalty')
         self.picketing_penalty = cd_actuator_dict.get('picketingPenalty')
@@ -78,7 +80,8 @@ class CDActuator:
         self.bending_matrix = self.calc_bending_matrix()
         self.q4_norm = self.calc_q4_norm()
         self.q4 = 1.0
-        self.Cc = None      # A constraint matrix, updated in the CDMPC class 
+        self.du = None  
+        self.u = None
 
         print('CDActuator Class Constructor')
         print('CD actuator name:', self.name)
@@ -185,7 +188,6 @@ class CDActuator:
         # difference since 2nd order difference connot be defined
         bending_matrix[0][0] = -1
         bending_matrix[nu-1][nu-1] = -1
-
         return bending_matrix
     
     def calc_q4_norm(self):
@@ -222,3 +224,16 @@ class CDActuator:
         Updates the q4 attribute
         '''
         self.q4 = self.calc_q4()
+
+    def update_du(self, du):
+        '''
+        updates the optimal delta u from the CDMPC object
+        '''
+        self.du = du
+
+    def update_u(self):
+        '''
+        updates u (the setpoints). Typically called from the CDMPC object
+        after it has calculated optimal delta u.
+        '''
+        self.u = self.u_1 + self.du

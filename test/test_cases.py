@@ -804,7 +804,7 @@ def test_case_20():
     with open(data_file_path, 'r') as f:
         Ac_matlab = json.load(f)
     Ac_matlab = np.array(Ac_matlab)
-    
+
     data_file = 'bc.json'
     data_file_path = data_dir + '/' + data_file
     with open(data_file_path, 'r') as f:
@@ -816,11 +816,12 @@ def test_case_20():
     # Create a cd_performanc_prediction object
     cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
     Ac = cd_performance_prediction.cd_mpc.Ac
-    #Bc = cd_performance_prediction.cd_mpc.Bc
-    #Cc = cd_performance_prediction.cd_mpc.Cc
     bc = cd_performance_prediction.cd_mpc.bc
-
+    (n_rows, n_cols) = Ac.shape
     Ac_diff = Ac_matlab - Ac
+
+    print('Top left corner of Ac:', Ac[0:5, 0:5])
+    print('Bottom right corner of Ac:', Ac[n_rows-5:n_rows, n_cols-5:n_cols])
 
     (rows, cols) = np.shape(Ac)
     [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
@@ -853,3 +854,66 @@ def test_case_20():
     plt.show()
 
     
+def test_case_21():
+    '''
+    Tests the calculation of optimal delta u by the QP solver
+    '''
+    # load the QP input and output data from the Matlab data file
+    data_file = 'QPMatrices.mat'
+    data_file_path = data_dir + '/' + data_file
+    matlab_data = sio.loadmat(data_file_path, squeeze_me = True)
+    print('matlab data variables: ', matlab_data.keys())
+    dU_matlab = matlab_data['dU'] #this is the result of the matlab QP solution
+
+    # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    dU = cd_performance_prediction.cd_mpc.dU
+
+    [fig, ax] = plt.subplots()
+    x = range(0,len(dU))
+    ax.plot(x, dU, 'b-', label = 'dU')
+    ax.plot(x, dU_matlab, 'r.-', label = 'dU from matlab')
+    ax.legend()
+    ax.set_title('dU vs dU from Matlab')
+    
+    for cd_actuator in cd_performance_prediction.cd_actuators:
+        du = cd_actuator.du
+        [fig, ax] = plt.subplots()
+        x = range(0,len(du))
+        ax.plot(x, du, 'b-', label = 'optimal du')
+        ax.legend()
+        ax.set_title(cd_actuator.name)
+    plt.show()
+
+def test_case_22():
+    '''
+    Tests the calculation of the optimal actuator setpoint arrays u(k)
+    '''
+    # Load the Matlab generated Q3 matrix
+    data_file = 'cdActuators.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        cd_actuators_matlab = json.load(f)
+
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    k = 0
+    for cd_actuator in cd_performance_prediction.cd_actuators:
+        u = cd_actuator.u
+        u_matlab = cd_actuators_matlab[k].get('finalProfile')
+        k += 1
+        [fig, ax] = plt.subplots()
+        x = range(0,len(u))
+        ax.plot(x, u, 'b-', label = 'optimal u')
+        ax.plot(x, u_matlab, 'r-.', label = 'optimal u from matlab')
+        ax.legend()
+        ax.set_title(cd_actuator.name)
+    plt.show()

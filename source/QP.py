@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 from scipy.optimize import LinearConstraint
 #from scipy.optimize import SR1
 
-def solve(PHI, phi, A, b, x0, method):
+def solve(PHI, phi, A, b, x0 = None, method = 'SLSQP'):
     '''
     solve solves the QP problem: 
 
@@ -18,14 +18,21 @@ def solve(PHI, phi, A, b, x0, method):
         A*x <= b
 
     Inputs:
-    PHI -   QP matrix, which is actually the Hessian
-    phi -   QP vector
-    A -     Linear constraint matrix
-    b -     Linear constraint vector
+    PHI -       QP matrix, which is actually the Hessian
+    phi -       QP vector
+    A -         Linear constraint matrix
+    b -         Linear constraint vector
+    x0 -        optional: the initial values of x (default is zeros)
+    method -    optional: 'trust-constr' or 'SLSQP' (default is 'SLSQP')
 
     Outputs:
     The optimal solution x that minimizes the QP problem
     '''
+    # Initial values
+    (n_x, _) = PHI.shape
+    if x0 == None:
+        x0 = np.zeros(n_x)
+    
     # the quadratic function
     f = lambda x: 0.5*x@PHI@x + phi@x
     
