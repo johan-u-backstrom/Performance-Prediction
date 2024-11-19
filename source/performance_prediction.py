@@ -12,7 +12,6 @@ from source.cd_actuator import CDActuator
 from source.cd_measurement import CDMeasurement
 from source.cd_process_model import CDProcessModel
 from source.cd_mpc import CDMPC
-# import source.QP
 
 class CDPerformancePrediction:
     '''
