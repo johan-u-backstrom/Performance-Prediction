@@ -26,7 +26,7 @@ class CDMPC:
     G_f -                   Full (concatinated) G matrix for the mimo CD process
     Y_1                     Concatenated array of initial measurement profiles, i.e. Y(k-1)
     U_1                     Concatenated array of initial actuator profiles, i.e. U(k-1)
-    Y_d                     Cconcatenated distrubance array Y_d
+    Y_d                     Cconcatenated initial distrubance array Y_d(k-1)
     Q1 -                    Final full (concatinated) Q1 matrix used in the CD-MPC objective function
     R -                     Ratio matrix relating Q3 of the steady state preformance prediction problem and the dynamic CD-MPC controller
     R_row_sum               The row sum of the ration matrix R
@@ -34,6 +34,9 @@ class CDMPC:
     Q4 -                    Final full (concatinated) Q4 matrix used in the CD-MPC objective function
     PHI -                   Hessian matrix in the QP problem formulation
     phi -                   The phi vector un the QP problem formulation
+    Ac -                    CD-MPC constraint matrix for the QP problem
+    bc -                    CD-MPC constraint matrix for the QP problem
+    Y -                     The new measurement profile Y(k)
    
     Class Methods:
     build_G_full -              Builds the G_f matrix
@@ -59,6 +62,8 @@ class CDMPC:
     calc_dU                     Calculates the concatenated delta u(k) array with all cd actuators beams concatenated
     update_du                   Updates delta u(k) in the CDActuator objects
     update_u                    Updates u(k) in the CDActuator objects
+    calc_Y                      Calculates the new concatinated measurement profile Y(k)
+    update_y                    Updates the new measurement profiles y(k) in the CDMeasurement objects
 
     '''
     
@@ -95,6 +100,8 @@ class CDMPC:
         self.dU = self.calc_dU(self.PHI, self.phi, self.Ac, self.bc)
         self.update_du(self.dU, cd_actuators)
         self.update_u(cd_actuators)
+        self.Y = self.calc_Y()
+        self.update_y(cd_measurements)
     # END Constructor
 
     def build_G_full(self, cd_process_model, cd_system, cd_actuators):
@@ -145,7 +152,7 @@ class CDMPC:
         '''
         Y_1 = [] 
         for cd_measurement in cd_measurements:
-            Y_1 += cd_measurement.initial_profile
+            Y_1 += cd_measurement.y_1
         Y_1 = np.array(Y_1)
         return Y_1
     
@@ -556,3 +563,29 @@ class CDMPC:
         '''
         for cd_actuator in cd_actuators:
             cd_actuator.update_u()
+
+    def calc_Y(self):
+        '''
+        calculates Y(k), which in the CD Performance Prediction problem
+        is the same as the steady state measurement profile Y_ss. 
+        '''
+        dU = self.dU
+        G_f = self.G_f
+        Y_1 = self.Y_1
+        
+        dY = G_f@dU
+        Y = Y_1 + dY
+        return Y
+    
+    def update_y(self, cd_measurements):
+        '''
+        updates the measurement profiles y(k) in the 
+        CDMeasurement objects.
+        '''
+        Y = self.Y
+        start_index = 0
+        for cd_measurement in cd_measurements:
+            ny = cd_measurement.resolution
+            y = Y[start_index:start_index+ny]
+            cd_measurement.update_y(y)
+            start_index += ny

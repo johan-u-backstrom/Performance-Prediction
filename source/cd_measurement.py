@@ -36,21 +36,21 @@ class CDMeasurement:
         self.resolution = cd_measurement_dict.get('resolution')
         self.units = cd_measurement_dict.get('units')
         self.control_mode_in = cd_measurement_dict.get('controlMode')
-        self.initial_profile = cd_measurement_dict.get('initialProfile')
-        self.initial_profile_spectrum = cd_measurement_dict.get('initialProfileSpectrum')
-        self.final_profile = cd_measurement_dict.get('finalProfile')
-        self.final_profile_spectrum = cd_measurement_dict.get('finalProfileSpectrum')
+        self.y_1 = cd_measurement_dict.get('initialProfile')
+        self.y_1_spectrum = cd_measurement_dict.get('initialProfileSpectrum')
         self.low_edge_of_sheet = cd_measurement_dict.get('lowEdgeOfSheet')
         self.high_edge_of_sheet = cd_measurement_dict.get('highEdgeOfSheet')
         self.md_target = cd_measurement_dict.get('mdTarget')
         self.bias_target_profile = cd_measurement_dict.get('biasTarget')
         self.weight = cd_measurement_dict.get('weight')
-
+     
         # Attributes calculated by class methods
-        [self.first_valid_index, self.last_valid_index] = self.calc_first_last_valid_index(self.initial_profile)
+        [self.first_valid_index, self.last_valid_index] = self.calc_first_last_valid_index(self.y_1)
         self.control_mode = self.update_control_mode(self.control_mode_in)
         self.target_profile = self.calc_target_profile()
         self.error_profile = self.calc_error_profile()
+        self.y = None               # updated by the CDMPC class
+        self.y_spectrum = None
 
         #  Attributes set by / called from the CDMPC object
         self.disturbance_profile = []
@@ -120,7 +120,7 @@ class CDMeasurement:
         N = self.resolution
         error_profile = np.zeros(N)
         target_profile = self.target_profile
-        init_meas_profile = self.initial_profile
+        init_meas_profile = self.y_1
         control_mode = self.control_mode
 
         if control_mode == 'cd_only':
@@ -131,8 +131,7 @@ class CDMeasurement:
             error_profile = init_meas_profile - target_profile
 
         return error_profile
-
-    
+ 
     def set_disturbance_profile(self, y_d):
         # Normally called from the CDMPC object
         self.disturbance_profile = y_d
@@ -191,3 +190,23 @@ class CDMeasurement:
                     break
 
         return first_valid_index, last_valid_index
+    
+    def update_y(self, y_in):
+        '''
+        updates the measurement profile y(k) which is 
+        the steady state profile in the CD Performance Prediction problem.
+        Called from the CDMPC class with the new measurement profile y)k) that 
+        then is edge padded.
+        '''
+        ny = self.resolution
+        first_valid_index = self.first_valid_index
+        last_valid_index = self.last_valid_index
+        
+        n_pad_front = first_valid_index
+        n_pad_back = ny - last_valid_index
+        
+        y_out = y_in
+        y_avg = np.mean(y_in[first_valid_index:last_valid_index])
+        y_out[0:first_valid_index] = y_avg*np.ones(n_pad_front)
+        y_out[last_valid_index:ny] = y_avg*np.ones(n_pad_back)
+        self.y = y_out

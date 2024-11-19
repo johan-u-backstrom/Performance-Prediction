@@ -893,7 +893,7 @@ def test_case_22():
     '''
     Tests the calculation of the optimal actuator setpoint arrays u(k)
     '''
-    # Load the Matlab generated Q3 matrix
+    # Load the Matlab generated CDActuators struct
     data_file = 'cdActuators.json'
     data_file_path = data_dir + '/' + data_file
     with open(data_file_path, 'r') as f:
@@ -916,4 +916,33 @@ def test_case_22():
         ax.plot(x, u_matlab, 'r-.', label = 'optimal u from matlab')
         ax.legend()
         ax.set_title(cd_actuator.name)
+    plt.show()
+
+def test_case_23():
+    '''
+    Tests the calculation of y(k) in the CDMeasurement objects  
+    '''
+     # Load the Matlab generated CDMeasurements struct
+    data_file = 'cdMeasurements.json'
+    data_file_path = data_dir + '/' + data_file
+    with open(data_file_path, 'r') as f:
+        cd_measurements_matlab = json.load(f)
+
+     # Load the input data for the CDPerformancePrediction Class
+    [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
+
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    
+    k = 0
+    for cd_measurement in cd_performance_prediction.cd_measurements:
+        y = cd_measurement.y
+        y_matlab = cd_measurements_matlab[k].get('finalProfile')
+        k += 1
+        [fig, ax] = plt.subplots()
+        x = range(0,len(y))
+        ax.plot(x, y, 'b-', label = 'optimal y')
+        ax.plot(x, y_matlab, 'r-.', label = 'optimal y from matlab')
+        ax.legend()
+        ax.set_title(cd_measurement.name)
     plt.show()
