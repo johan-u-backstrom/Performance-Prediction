@@ -7,6 +7,8 @@ Copyright: Honeywell Process Solutions - North Vancouver
 import numpy as np
 from scipy.linalg import block_diag
 from source import QP
+from qpsolvers import solve_qp
+
 
 class CDMPC:
     '''
@@ -542,8 +544,9 @@ class CDMPC:
         '''
         Calculates the optimal delta u setpoints by calling the QP solver.
         '''
-        dU = QP.solve(PHI, phi, Ac, bc)
+        #dU = QP.solve(PHI, phi, Ac, bc)
         #dU = QP.solve(PHI, phi, Ac, bc, method = 'trust-constr')
+        dU = solve_qp(PHI, phi, Ac, bc, solver = 'quadprog')
         return dU
     
     def update_du(self, dU, cd_actuators):
