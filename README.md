@@ -4,7 +4,7 @@ Performance Prediction provides CD (cross directional) performance predictions f
 CD-MPC based multivariable (multi beam) cross directional control for Honeywell's
 QCS 4.0 web application
 
-## Project Struction
+## Project Structure
 
 The application has the following project (directory) structure:
 
