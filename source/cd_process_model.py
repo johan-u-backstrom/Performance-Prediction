@@ -52,7 +52,8 @@ class CDProcessModel:
     C -                         A Ny x Nu nested list of B matrices in the state space representation for the u->y system
     
     Class Methods:
-    response_type_mimo_build    -   builds the response_type attribute
+    collaps_process_matrix -        collpses a process model parameter matrix in case it is array based
+    response_type_mimo_build -      builds the response_type attribute
     edge_padding_mode_mimo_build -  builds the edge_padding_mode attribute
     zba_mimo_build -                builds the zba attribute
     G_mimo_build -                  builds the G attribute
@@ -73,15 +74,15 @@ class CDProcessModel:
         self.Nu = Nu    # number of cd actuator beams (arrays)
 
         # Spatial model
-        self.gain =  cd_process_model_dict.get('gain')
-        self.width = cd_process_model_dict.get('width')
+        self.gain =  self.collaps_process_matrix(cd_process_model_dict.get('gain'),  cd_actuators_obj_lst)
+        self.width = self.collaps_process_matrix(cd_process_model_dict.get('width'), cd_actuators_obj_lst)
         self.width_in_bins = np.array(np.zeros((Ny, Nu))).tolist()
         # need to convert the width from eng. units to cd bins
         for i in range(Ny):
             for j in range(Nu):
                 self.width_in_bins[i][j] = self.width[i][j]/cd_system_obj.bin_width
-        self.attenuation = cd_process_model_dict.get('attenuation')
-        self.divergence = cd_process_model_dict.get('divergence')
+        self.attenuation = self.collaps_process_matrix(cd_process_model_dict.get('attenuation'), cd_actuators_obj_lst)
+        self.divergence = self.collaps_process_matrix(cd_process_model_dict.get('divergence'), cd_actuators_obj_lst)
         
         self.response_type = self.response_type_mimo_build(cd_process_model_dict)
         self.edge_padding_mode = self.edge_padding_mode_mimo_build(cd_process_model_dict)
@@ -89,21 +90,63 @@ class CDProcessModel:
         self.G = self.G_mimo_build(cd_actuators_obj_lst, cd_measurements_obj_lst)
         
         # Dynamic model
-        self.time_constant = cd_process_model_dict.get('timeConstant')
-        self.time_delay = cd_process_model_dict.get('timeDelay')
+        self.time_constant = self.collaps_process_matrix(cd_process_model_dict.get('timeConstant'), cd_actuators_obj_lst)
+        self.time_delay = self.collaps_process_matrix(cd_process_model_dict.get('timeDelay'), cd_actuators_obj_lst)
         self.sample_time = cd_system_obj.sample_time
+        self.Nd = np.ceil(self.time_delay/self.sample_time)
+        
         [self.num, self.den] = self.tf_mimo_build()
 
         # 2D State space model
         [self.A, self.B, self.C] = self.ss_mimo_build()     
 
-        print('CDProcessModel Class Constructor')
-        print('process model gain =', self.gain)
-        print('process model width in eng units =', self.width)
-        print('process model width in bins =', self.width_in_bins)
-      
         # END Constructor
 
+    def collaps_process_matrix(self, M_in, cd_actuators):
+        '''
+                                                             Nu
+        collapses a process model paramter matrix from Ny x Sum(nu(i))
+                                                             i=1 
+        to Ny x Nu, i.e. use the same model parameters for all actuators in 
+        an actuator beam. While the CD-MPC controller support different model parameters
+        for each individual CD actuator, IntelliMap does not support it and it not used in 
+        practice. 
+
+        Calling syntax:     M_out =  collaps_process_matrix(M_in, cd_actuators)
+
+        Inputs:
+        M_in -              Ny x sum(nu(i)) process model parameter matrix
+        cd_actuators -      list of cd_actuator objects
+
+        Outputs:
+        M_out -             Ny x Nu process model parameter matrix
+        '''
+        M_in = np.array(M_in)
+        Nu = self.Nu
+        Ny = self.Ny
+        M_out = np.zeros((Ny,Nu))
+        nu_array = np.zeros(Nu)
+        i = 0
+        for cd_actuator in cd_actuators:
+            nu_array[i] = int(cd_actuator.resolution)
+            i += 1
+        nu_sum = np.sum(nu_array)
+        if M_in.shape == (Ny, Nu):
+            # No need to convert the matrix, it is already in the desired dimension
+            return M_in
+        elif M_in.shape == (Ny, nu_sum):
+            # Collaps the dimension
+            for i in range(Ny):
+                start_index = 0
+                for j in range(Nu):
+                    end_index = int(start_index+nu_array[j])
+                    M_out[i][j] = np.mean(M_in[i][start_index:end_index])
+                    start_index  += int(nu_array[j])
+        else:
+            # Add error handler
+            print('A process model parameter matrix has an unexpected dimension')
+        return M_out
+    
     def response_type_mimo_build(self, cd_process_model_dict):
         '''
         response_type_mimo_build builds/extracts a Ny x Nu 2D nested list of CD response types from the 
@@ -314,6 +357,10 @@ class CDProcessModel:
         G -         spatial resonse matrix
         '''
         G = np.zeros((my, nu))
+        if g == 0:
+            # If the gain is zero, there is no point proceeding as the G matrix will be a zero matrix
+            return G
+        
         eps = np.finfo(float).eps
 
         # For fiber orientation models, the original matlab code
@@ -356,7 +403,7 @@ class CDProcessModel:
                 # find the location of CD coordinates where x-ZBAc(i) == 0, to prevent division
                 # by zero in the the model
                 i_dx_0 = np.argwhere(np.equal(x, zba_c[i]))
-                print('i_dx_0 =', i_dx_0)
+              
                 if np.size(i_dx_0) != 0: 
                     x[i_dx_0] = eps*np.ones(np.shape(i_dx_0)) + x[i_dx_0]
 
@@ -410,10 +457,7 @@ class CDProcessModel:
 
             # Calculate the augmented response matrix
             G_aug =  CDProcessModel.cd_response_matrix_calc(zba_a, my, nu_a, g, w, a = a, d = d, response_type = response_type, caller = 'edge_padding')
-            print('shape of G_aug:', np.shape(G_aug))
-            print('G_aug[:,0,2] = ', G_aug[:,0:3])
-            print('G_aug[:,33:35] = ', G_aug[:,33:36])
-
+            
             # Calculate the equivalent padding matrix G_hat to G_aug, such that
             #
             #   G_hat*u = G_aug*u_aug
@@ -500,7 +544,6 @@ class CDProcessModel:
     
             G = G_hat
    
-
         # round small leading and trailing values to zero
         epsilon = 0.001*g
         for i in range(nu):

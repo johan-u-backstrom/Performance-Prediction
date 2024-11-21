@@ -241,7 +241,7 @@ class CDMPC:
         '''
         Ny = cd_process_model.Ny
         Nu = cd_process_model.Nu
-        Td = cd_process_model.time_delay
+        Nd = cd_process_model.Nd
         Hp = self.Hp
         A = cd_process_model.A
         B = cd_process_model.B
@@ -255,7 +255,7 @@ class CDMPC:
                     # hence we need to update R from its initial values of zero
                     a = np.mean(np.diag(A[i][j]))
                     a_sum = 0
-                    for m in range(1,Hp-Td[i][j]+1):
+                    for m in range(1,Hp-int(Nd[i][j])+1):
                         for n in range(1, m+1):
                             a_sum += a**(n-1)
                     R[i][j] = (1-a)*a_sum   
@@ -281,7 +281,7 @@ class CDMPC:
         # array, so this should never happen but the matlab code has this protection ....
         for j in range(len(R_row_sum)):
             if R_row_sum[j] == 0:
-                R_row_sum = 1e-8
+                R_row_sum[j] = 1e-8
 
         return R_row_sum
 
@@ -543,6 +543,7 @@ class CDMPC:
         Calculates the optimal delta u setpoints by calling the QP solver.
         '''
         dU = QP.solve(PHI, phi, Ac, bc)
+        #dU = QP.solve(PHI, phi, Ac, bc, method = 'trust-constr')
         return dU
     
     def update_du(self, dU, cd_actuators):

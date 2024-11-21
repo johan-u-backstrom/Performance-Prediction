@@ -27,62 +27,62 @@ def load_performance_prediction_data():
     '''
     # Load system data as Dict
     data_file = 'system.json'
-    print('data_file = ', data_file)
+    #print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
         system_data = json.load(f)
     
-    print('List length:', len(system_data))
-    pprint.pprint(system_data)
+    #print('List length:', len(system_data))
+    #pprint.pprint(system_data)
    
     # Load cd actuators data as List of Dicts
     data_file = 'cdActuators.json'
-    print('data_file = ', data_file)
+    #print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
         cd_actuators_data = json.load(f)
     
-    print('List length:', len(cd_actuators_data))
-    print('Keys in first List element:')
-    for key in cd_actuators_data[0]:
-        print(key)
+    #print('List length:', len(cd_actuators_data))
+    #print('Keys in first List element:')
+    #for key in cd_actuators_data[0]:
+    #    print(key)
 
     # Load cd measurements data as List of Dicts
     data_file = 'cdMeasurements.json'
-    print('data_file = ', data_file)
+    #print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
         cd_measurements_data = json.load(f)
     
-    print('List length:', len(cd_measurements_data))
-    print('Keys in first List element:')
-    for key in cd_measurements_data[0]:
-        print(key)
+    #print('List length:', len(cd_measurements_data))
+    #print('Keys in first List element:')
+    #for key in cd_measurements_data[0]:
+    #    print(key)
 
     # Load process model data as Dict
     data_file = 'cdProcessModel.json'
-    print('data_file = ', data_file)
+    #print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
         cd_process_model_data = json.load(f)
     
-    print('Dict length:', len(cd_process_model_data))
-    pprint.pprint(cd_process_model_data)
+    #print('Dict length:', len(cd_process_model_data))
+    #pprint.pprint(cd_process_model_data)
     
     # Load CD-MPC tuning data as Dict
     data_file = 'cdMpcTuning.json'
-    print('data_file = ', data_file)
+    #print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
    
     with open(data_file_path, 'r') as f:
         cd_mpc_tuning_data = json.load(f)
     
-    print('Dict length:', len(cd_mpc_tuning_data))
-    pprint.pprint(cd_mpc_tuning_data)
+    #print('Dict length:', len(cd_mpc_tuning_data))
+    #pprint.pprint(cd_mpc_tuning_data)
 
     return system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data
 
@@ -534,11 +534,12 @@ def test_case_14():
     B = cd_performance_prediction.cd_process_model.B
     C = cd_performance_prediction.cd_process_model.C
     print('Shape of A:', np.shape(A))
-    print('Shape of B:', np.shape(B))
+    #print('Shape of B:', np.shape(B))
     print('Shape of C:', np.shape(C))
     print('top left 5 x 5 elements of C[2][1]:', C[2][1][0:5][0:5] )
 
     # Plot A[2][1]
+    A_21 = A[2][1]
     (rows, cols) = np.shape(A[2][1])
     [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
     [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
@@ -608,7 +609,7 @@ def test_case_16():
     Q3_matlab = np.array(Q3_matlab)
     Q3_diff = Q3_matlab - Q3
 
-    print('shape of Q1 =', np.shape(Q3))
+    print('shape of Q3 =', np.shape(Q3))
 
     for cd_actuator in cd_performance_prediction.cd_actuators:
         print('Energy penalty for ' + cd_actuator.name + ' is ', cd_actuator.energy_penalty) 
@@ -852,7 +853,6 @@ def test_case_20():
     ax.set_title( 'bc')
 
     plt.show()
-
     
 def test_case_21():
     '''
@@ -937,7 +937,9 @@ def test_case_23():
     k = 0
     for cd_measurement in cd_performance_prediction.cd_measurements:
         y = cd_measurement.y
+        two_sigma = round(2*np.std(y)*100)/100
         y_matlab = cd_measurements_matlab[k].get('finalProfile')
+        two_sigma_matlab = round(2*np.std(y_matlab)*100)/100
         k += 1
         [fig, ax] = plt.subplots()
         x = range(0,len(y))
@@ -945,4 +947,6 @@ def test_case_23():
         ax.plot(x, y_matlab, 'r-.', label = 'optimal y from matlab')
         ax.legend()
         ax.set_title(cd_measurement.name)
+        x_label_string = '$2\sigma = $' + str(two_sigma) + ', ' + '$2\sigma_{matlab} = $' + str(two_sigma_matlab)
+        ax.set_xlabel(x_label_string)
     plt.show()

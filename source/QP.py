@@ -63,7 +63,7 @@ def solve(PHI, phi, A, b, x0 = None, method = 'SLSQP'):
         '''
         solve the QP probem using the SLSQP method, note that the inequality constraints are define differently from the trust-constr method
         '''
-        res = minimize(f, x0, method = 'SLSQP', jac = J, constraints = linear_constraints, options={'maxiter': 1000, 'ftol': 1e-9, 'disp': True})
-
+        #res = minimize(f, x0, method = 'SLSQP', jac = J, constraints = linear_constraints, options={'maxiter': 1000, 'ftol': 1e-9, 'disp': True})
+        res = minimize(f, x0, method = 'SLSQP', jac = J, constraints = linear_constraints, options={'disp': True})
     return res.x
 
