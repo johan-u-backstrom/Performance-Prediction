@@ -121,9 +121,12 @@ class CDProcessModel:
         Outputs:
         M_out -             Ny x Nu process model parameter matrix
         '''
-        M_in = np.array(M_in)
         Nu = self.Nu
         Ny = self.Ny
+        if Ny == 1:
+            # Need to created an Ny x Ny nested list
+            M_in = [M_in]
+        M_in = np.array(M_in)
         M_out = np.zeros((Ny,Nu))
         nu_array = np.zeros(Nu)
         i = 0
@@ -155,6 +158,9 @@ class CDProcessModel:
         Ny = self.Ny
         Nu = self.Nu
         resp_shape = cd_process_model_dict.get('respShape')
+        if Ny == 1:
+            # need to convert to a Ny x Nu nexted list 
+            resp_shape = [resp_shape]
         response_type_mimo = np.zeros((Ny, Nu)).tolist()
         for i in range(Ny):
             for j in range(Nu):
@@ -175,6 +181,9 @@ class CDProcessModel:
         Ny = self.Ny
         Nu = self.Nu
         padding_mode = cd_process_model_dict.get('actPaddingMode')
+        if Ny == 1:
+            # Need to convert to a Ny x Nu nested list
+            padding_mode = [padding_mode]
         edge_padding_mode_mimo = np.zeros((Ny, Nu)).tolist()
         for i in range(Ny):
             for j in range(Nu):

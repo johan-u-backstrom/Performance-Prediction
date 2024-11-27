@@ -60,15 +60,21 @@ class CDActuator:
         self.control_enabled = cd_actuator_dict.get('controlEnable') # 1 maps to CASCADE and 0 maps to AUTO/MANUAL control modes in Experion MX CD Control
         self.energy_penalty = cd_actuator_dict.get('energyPenalty')
         self.picketing_penalty = cd_actuator_dict.get('picketingPenalty')
-        self.min_setpoint = cd_actuator_dict.get('min')
+        self.min_setpoints = cd_actuator_dict.get('min')
+        if np.isscalar(self.min_setpoints):
+            self.min_setpoints = [self.min_setpoints]*self.resolution
         self.min_enabled = cd_actuator_dict.get('minEnabled')
-        self.max_setpoint = cd_actuator_dict.get('max')
+        self.max_setpoints = cd_actuator_dict.get('max')
+        if np.isscalar(self.max_setpoints):
+            self.max_setpoints = [self.max_setpoints]*self.resolution
         self.max_enabled = cd_actuator_dict.get('maxEnabled')
         self.avg_min_setpoint = cd_actuator_dict.get('averageMin')
         self.avg_max_setpoint = cd_actuator_dict.get('averageMax')
         self.avg_enabled = cd_actuator_dict.get('averageEnabled')
         self.desired_setpoints = cd_actuator_dict.get('desiredActSetpoints')
-        self.update_desired_setpoints()
+        if np.isscalar(self.desired_setpoints):
+            self.desired_setpoints = [self.desired_setpoints]*self.resolution
+        #self.update_desired_setpoints()
         self.bend_limit_first_order = cd_actuator_dict.get('bendLimitFirstOrder')
         self.bend_limit_second_order = cd_actuator_dict.get('bendLimitSecondOrder')
         self.bend_limit_enabled = cd_actuator_dict.get('bendLimitEnabled')
@@ -104,8 +110,8 @@ class CDActuator:
         Calling Syntax: max_range = calc_max_range()
         '''
         desired_setpoints = np.array(self.desired_setpoints)
-        min_setpoint = self.min_setpoint
-        max_setpoint = self.max_setpoint
+        min_setpoint = self.min_setpoints
+        max_setpoint = self.max_setpoints
         max_range_down = np.max(np.abs(desired_setpoints - min_setpoint))
         max_range_up = np.max(np.abs(max_setpoint - desired_setpoints))
         max_range = np.max([max_range_down, max_range_up])

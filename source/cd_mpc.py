@@ -410,7 +410,9 @@ class CDMPC:
         for cd_measurement in cd_measurements:
             E += cd_measurement.error_profile.tolist()
         E = np.array(E)
-
+        print('E =', E)
+        print('U_e = ', U_e)
+        print('U_1 =', U_1)
         phi = E@Q1@G_f + U_e@Q3 + U_1@Q4  
 
         return phi
@@ -457,14 +459,14 @@ class CDMPC:
         
         for cd_actuator in cd_actuators:
             nu = cd_actuator.resolution
-            u_max = cd_actuator.max_setpoint
+            max_setpoints = np.array(cd_actuator.max_setpoints)
             if not(cd_actuator.max_enabled):
                 # Relax the constraint
-                u_max = 1e6
-            u_min = cd_actuator.min_setpoint
+                max_setpoints = 1e6*np.ones(cd_actuator.resolution)
+            min_setpoints = np.array(cd_actuator.min_setpoints)
             if not(cd_actuator.min_enabled):
                # Relax the constraint
-               u_min = -1e6
+               min_setpoints = -1e6*np.ones(cd_actuator.resolution)
 
             # Note: All Bi arrays below should be column vectors but numpy does not differentiate between a
             # 1D array and its transpose and should therefore automatically 
@@ -480,7 +482,7 @@ class CDMPC:
             # Relax constraints
             active_constraints = cd_actuator.control_enabled*cd_actuator.bend_limit_enabled 
             relaxed_constraints = np.logical_not(active_constraints).astype(int)
-            relaxed_constraint_limits = 10*(u_max-u_min)*relaxed_constraints
+            relaxed_constraint_limits = 10*max(max_setpoints-min_setpoints)*relaxed_constraints
             bend_limits += relaxed_constraint_limits
             B1 = np.hstack((bend_limits, bend_limits)) 
             
@@ -495,7 +497,7 @@ class CDMPC:
             if sum_active == 0.0:
                 # There are no active constraints -> Relax the constraint
                 A2_block = np.ones(nu)/nu     # use all actuators in avg in case the constraint is relaxed (not in use)
-                B2 = np.array([u_max, -u_min])
+                B2 = np.array([max(max_setpoints), -min(min_setpoints)])
             else:
                 A2_block = active_constraints/sum_active
                 B2 = np.array([avg_max, -avg_min])
@@ -510,7 +512,7 @@ class CDMPC:
             I = np.eye(nu) 
             A34 = np.vstack((I, -I)) 
             C34 = A34
-            B34 = np.hstack((u_max*np.ones(nu), -u_min*np.ones(nu)))
+            B34 = np.hstack((max_setpoints, -min_setpoints))
 
             # Stack the A and C matrices and the B vector
             A_stack = np.vstack((A1, A2, A34))

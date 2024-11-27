@@ -95,7 +95,7 @@ class CDMeasurement:
         target_profile = np.zeros(ny)
         control_mode = self.control_mode
         bias_target_profile = self.bias_target_profile - np.mean(self.bias_target_profile)
-        md_target = self.md_target
+        md_target = self.md_target + np.mean(self.bias_target_profile)
         
         if control_mode == 'cd_only':
             target_profile = bias_target_profile

@@ -27,11 +27,11 @@ class CDPerformancePrediction:
                                                             cd_process_model_dict, cd_mpc_tuning_dict)
 
     Input Parameters:
-        cd_system_dict  -       A dictionary of (QCS) system data that is not tied to a CD actuator or CD measurement    
-        cd_actuators_lst -      A List of Dictionaries with CD actuator data
-        cd_measurement_lst -    A List of Dictionary with CD measurement data
-        cd_process_model_dict - A dictionary of CD process model data
-        cd_mpc_tuning_dict -    A dictionary of cd-mpc tuning data
+        cd_system  -        A dictionary of (QCS) system data that is not tied to a CD actuator or CD measurement    
+        cd_actuators -      A dictionary (if one cd actuator) or a list of dictionaries with CD actuator data
+        cd_measurements -   A disctionary (if one cd measurement) or a list of dictionary with CD measurement data
+        cd_process_model -  A dictionary of CD process model data
+        cd_mpc_tuning -     A dictionary of cd-mpc tuning data
     
     Class Attributes:
         Nu -                    Number of CD actuator beams
@@ -43,31 +43,36 @@ class CDPerformancePrediction:
 
     '''
 
-    def __init__(self, cd_system_dict, cd_actuators_lst, cd_measurements_lst, cd_process_model_dict, cd_mpc_tuning_dict):
+    def __init__(self, cd_system, cd_actuators, cd_measurements, cd_process_model, cd_mpc_tuning):
         '''
         The Class Constructor
         '''
         # Add a system object
-        self.cd_system = CDSystem(cd_system_dict)
+        self.cd_system = CDSystem(cd_system)
      
         # Add a List of cd actuator objects
-        self.Nu = len(cd_actuators_lst)
+        if type(cd_actuators) == dict:
+            # convert to a list of dicts
+            cd_actuators = [cd_actuators]
+        self.Nu = len(cd_actuators)
         self.cd_actuators = []
-        for act_dict in cd_actuators_lst:
+        for act_dict in cd_actuators:
             self.cd_actuators.append( CDActuator(act_dict))
 
         # Add a List of cd measurement objects: cd_measurements
-        self.Ny = len(cd_measurements_lst)
+        if type(cd_measurements) == dict:
+            cd_measurements = [cd_measurements]
+        self.Ny = len(cd_measurements)
         self.cd_measurements = []
-        for meas_dict in cd_measurements_lst:
+        for meas_dict in cd_measurements:
             self.cd_measurements.append(CDMeasurement(meas_dict))
 
         # Add a cd_process_model object
-        self.cd_process_model = CDProcessModel(cd_process_model_dict, self.cd_system, self.cd_actuators, 
+        self.cd_process_model = CDProcessModel(cd_process_model, self.cd_system, self.cd_actuators, 
                                                self.cd_measurements, self.Nu, self.Ny)
         
         # Add a cd_mpc object
-        self.cd_mpc = CDMPC(cd_mpc_tuning_dict, self.cd_system, self.cd_actuators, self.cd_measurements,
+        self.cd_mpc = CDMPC(cd_mpc_tuning, self.cd_system, self.cd_actuators, self.cd_measurements,
                             self.cd_process_model)
     #END constructor
 

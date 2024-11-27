@@ -43,7 +43,6 @@ def load_performance_prediction_data():
    
     with open(data_file_path, 'r') as f:
         cd_actuators_data = json.load(f)
-    
     #print('List length:', len(cd_actuators_data))
     #print('Keys in first List element:')
     #for key in cd_actuators_data[0]:
@@ -307,24 +306,26 @@ def test_case_9():
     # Load the input data for the CDPerformancePrediction Class
     [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
 
+    # Create a cd_performanc_prediction object
+    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
+    print('Printing of cd_performance_prediction object attributes')
+    Nu = cd_performance_prediction.Nu
+    Ny = cd_performance_prediction.Ny
+    print('Nu =', Nu)
+    print('Ny =', Ny)
+
     # Load the G_mimo matrix struct generated from matlab
     data_file = 'G_mimo.json'
     print('data_file = ', data_file)
     data_file_path = data_dir + '/' + data_file
     with open(data_file_path, 'r') as f:
         G_mimo = json.load(f)
+    if Ny == 1:
+        # Need to convert to an Ny x Nu nested list
+        G_mimo = [G_mimo]
+
     print('rows of G_mimo from matlab:', len(G_mimo))
     print('cols of G_mimo from matlab:', len(G_mimo[0]))
-    # Create a cd_performanc_prediction object
-    cd_performance_prediction = CDPerformancePrediction(system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data)
-    G = cd_performance_prediction.cd_process_model.G
-    #G_f_matlab = np.array(G_f_matlab)
-    #G_f_diff = G_f_matlab - G_f
-    print('Printing of cd_performance_prediction object attributes')
-    Nu = cd_performance_prediction.Nu
-    Ny = cd_performance_prediction.Ny
-    print('Nu =', Nu)
-    print('Ny =', Ny)
 
      # Plot the G matrices from Matlab
     for i in range(Ny):
@@ -536,41 +537,41 @@ def test_case_14():
     print('Shape of A:', np.shape(A))
     #print('Shape of B:', np.shape(B))
     print('Shape of C:', np.shape(C))
-    print('top left 5 x 5 elements of C[2][1]:', C[2][1][0:5][0:5] )
+    print('top left 5 x 5 elements of C[0][0]:', C[0][0][0:5][0:5] )
 
-    # Plot A[2][1]
-    A_21 = A[2][1]
-    (rows, cols) = np.shape(A[2][1])
+    # Plot A[0][0]
+    A_00 = A[0][0]
+    (rows, cols) = np.shape(A[0][0])
     [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
     [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
-    surf = ax.plot_surface(X, Y, A[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    surf = ax.plot_surface(X, Y, A[0][0], cmap = 'coolwarm',linewidth = 0, antialiased = False)
     fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.title('A[2][1]')
+    plt.title('A[0][0]')
 
 
-     # Plot B[2][1]
-    (rows, cols) = np.shape(B[2][1])
+     # Plot B[0][0]
+    (rows, cols) = np.shape(B[0][0])
     [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
     [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
-    surf = ax.plot_surface(X, Y, B[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    surf = ax.plot_surface(X, Y, B[0][0], cmap = 'coolwarm',linewidth = 0, antialiased = False)
     fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.title('B[2][1]')
+    plt.title('B[0][0]')
 
     [fig, ax] = plt.subplots()
-    ax.plot(B[2][1])
-    plt.title('B[2][1]')
+    ax.plot(B[0][0])
+    plt.title('B[0][0]')
 
-    # Plot C[2][1]
-    (rows, cols) = np.shape(C[2][1])
+    # Plot C[0][0]
+    (rows, cols) = np.shape(C[0][0])
     [fig, ax] = plt.subplots(subplot_kw={"projection": "3d"})
     [X, Y] = np.meshgrid(np.linspace(0, cols-1, cols), np.linspace(0, rows-1, rows))  
-    surf = ax.plot_surface(X, Y, C[2][1], cmap = 'coolwarm',linewidth = 0, antialiased = False)
+    surf = ax.plot_surface(X, Y, C[0][0], cmap = 'coolwarm',linewidth = 0, antialiased = False)
     fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.title('C[2][1]')
+    plt.title('C[0][0]')
 
     [fig, ax] = plt.subplots()
-    ax.plot(np.diag(C[2][1]))
-    plt.title('Diagonal of C[2][1]')
+    ax.plot(np.diag(C[0][0]))
+    plt.title('Diagonal of C[0][0]')
     
     plt.show()
 
@@ -927,6 +928,9 @@ def test_case_23():
     data_file_path = data_dir + '/' + data_file
     with open(data_file_path, 'r') as f:
         cd_measurements_matlab = json.load(f)
+    if type(cd_measurements_matlab) == dict:
+        # convert to list of dicts
+        cd_measurements_matlab = [cd_measurements_matlab]
 
      # Load the input data for the CDPerformancePrediction Class
     [system_data, cd_actuators_data, cd_measurements_data, cd_process_model_data, cd_mpc_tuning_data] = load_performance_prediction_data()
