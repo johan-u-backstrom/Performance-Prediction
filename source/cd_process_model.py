@@ -161,6 +161,9 @@ class CDProcessModel:
         if Ny == 1:
             # need to convert to a Ny x Nu nexted list 
             resp_shape = [resp_shape]
+        if Nu == 1:
+            # need to convert to a Ny x Nu nexted list 
+            resp_shape = [resp_shape]
         response_type_mimo = np.zeros((Ny, Nu)).tolist()
         for i in range(Ny):
             for j in range(Nu):
@@ -182,6 +185,9 @@ class CDProcessModel:
         Nu = self.Nu
         padding_mode = cd_process_model_dict.get('actPaddingMode')
         if Ny == 1:
+            # Need to convert to a Ny x Nu nested list
+            padding_mode = [padding_mode]
+        if Nu == 1:
             # Need to convert to a Ny x Nu nested list
             padding_mode = [padding_mode]
         edge_padding_mode_mimo = np.zeros((Ny, Nu)).tolist()
@@ -441,10 +447,10 @@ class CDProcessModel:
             # Determine the number of actuator zones to pad at the low and high end 
             # of the sheet. The required actuator padding is half the response width,
             # measured actuator zones at the measurement location (scanner) 
-            awd_at_scanner = np.mean(zba[1:] - zba[0:-1])       # in cd bins
+            awd_at_scanner = np.mean(zba[1:] - zba[0:-1])            # in cd bins
             n_pad = int(np.ceil((resp_width/2)/awd_at_scanner))      # number of actuator zones to pad
             
-            print('reqiured act zones to pad = ', n_pad)
+            print('reqiured act zones to pad at the at edges of sheet = ', n_pad)
 
             # Augment the zba
             zba_pad_low = np.zeros(n_pad)
