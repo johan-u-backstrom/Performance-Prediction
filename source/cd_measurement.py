@@ -46,6 +46,7 @@ class CDMeasurement:
      
         # Attributes calculated by class methods
         [self.first_valid_index, self.last_valid_index] = self.calc_first_last_valid_index(self.y_1)
+        self.y_1 = self.pad_edges(self.y_1, self.first_valid_index, self.last_valid_index)
         self.control_mode = self.update_control_mode(self.control_mode_in)
         self.target_profile = self.calc_target_profile()
         self.error_profile = self.calc_error_profile()
@@ -191,22 +192,27 @@ class CDMeasurement:
 
         return first_valid_index, last_valid_index
     
-    def update_y(self, y_in):
+    def pad_edges(self, y_in, first_valid_index, last_valid_index):
         '''
-        updates the measurement profile y(k) which is 
-        the steady state profile in the CD Performance Prediction problem.
-        Called from the CDMPC class with the new measurement profile y)k) that 
-        then is edge padded.
+        pads the edges of a measurement profile y with the 
+        profile average.
         '''
         ny = self.resolution
-        first_valid_index = self.first_valid_index
-        last_valid_index = self.last_valid_index
+        y_out = y_in.copy()
         
         n_pad_front = first_valid_index
-        n_pad_back = ny - last_valid_index
+        n_pad_back = ny-1 - last_valid_index
         
-        y_out = y_in
-        y_avg = np.mean(y_in[first_valid_index:last_valid_index])
+        y_avg = np.mean(y_in[first_valid_index:last_valid_index+1])
         y_out[0:first_valid_index] = y_avg*np.ones(n_pad_front)
-        y_out[last_valid_index:ny] = y_avg*np.ones(n_pad_back)
-        self.y = y_out
+        y_out[last_valid_index+1:ny] = y_avg*np.ones(n_pad_back)
+        return y_out
+    
+    def update_y(self, y_in):
+        '''
+        updates the new measurement profile y(k) from the CDMPC class
+        '''
+        first_valid_index = self.first_valid_index
+        last_valid_index = self.last_valid_index
+        y_padded = self.pad_edges(y_in, first_valid_index, last_valid_index)
+        self.y = y_padded

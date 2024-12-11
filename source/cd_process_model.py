@@ -158,12 +158,9 @@ class CDProcessModel:
         Ny = self.Ny
         Nu = self.Nu
         resp_shape = cd_process_model_dict.get('respShape')
-        if Ny == 1:
-            # need to convert to a Ny x Nu nexted list 
-            resp_shape = [resp_shape]
-        if Nu == 1:
-            # need to convert to a Ny x Nu nexted list 
-            resp_shape = [resp_shape]
+        # Ensure a Ny x Nu nested list (potential input format issues if Ny or Nu == 1)
+        resp_shape = np.atleast_2d(resp_shape).tolist()
+     
         response_type_mimo = np.zeros((Ny, Nu)).tolist()
         for i in range(Ny):
             for j in range(Nu):
@@ -184,12 +181,9 @@ class CDProcessModel:
         Ny = self.Ny
         Nu = self.Nu
         padding_mode = cd_process_model_dict.get('actPaddingMode')
-        if Ny == 1:
-            # Need to convert to a Ny x Nu nested list
-            padding_mode = [padding_mode]
-        if Nu == 1:
-            # Need to convert to a Ny x Nu nested list
-            padding_mode = [padding_mode]
+        # Ensure a Ny x Nu nested list (potential input format issues if Ny or Nu == 1)
+        padding_mode = np.atleast_2d( padding_mode).tolist()
+   
         edge_padding_mode_mimo = np.zeros((Ny, Nu)).tolist()
         for i in range(Ny):
             for j in range(Nu):

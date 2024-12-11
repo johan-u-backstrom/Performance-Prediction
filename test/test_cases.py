@@ -909,7 +909,7 @@ def test_case_22():
     k = 0
     for cd_actuator in cd_performance_prediction.cd_actuators:
         u = cd_actuator.u
-        u_matlab = cd_actuators_matlab[k].get('finalProfile')
+        u_matlab = cd_actuators_matlab[k].get('initialProfile')
         k += 1
         [fig, ax] = plt.subplots()
         x = range(0,len(u))
@@ -942,7 +942,7 @@ def test_case_23():
     for cd_measurement in cd_performance_prediction.cd_measurements:
         y = cd_measurement.y
         two_sigma = round(2*np.std(y)*100)/100
-        y_matlab = cd_measurements_matlab[k].get('finalProfile')
+        y_matlab = cd_measurements_matlab[k].get('initialProfile')
         two_sigma_matlab = round(2*np.std(y_matlab)*100)/100
         k += 1
         [fig, ax] = plt.subplots()
